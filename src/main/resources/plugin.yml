@@ -1,0 +1,9 @@
+name: Letisland
+version: '${version}'
+
+main: cn.lettle.letisland.Letisland
+api-version: '26.2'
+load: POSTWORLD
+
+authors: [ Lettle ]
+website: lettle.cn
