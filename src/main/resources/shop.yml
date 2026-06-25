@@ -15,82 +15,323 @@ settings:
 # weight: 随机权重（越大越容易被刷新到）
 # display-name: 自定义显示名称（可选）
 buy-items:
+  # ===== 矿物类 =====
   diamond:
     material: DIAMOND
     amount: 1
-    price: 100.0
+    price: 150.0
     weight: 1.0
     display-name: "§b钻石"
   iron_ingot:
     material: IRON_INGOT
-    amount: 16
-    price: 50.0
+    amount: 4
+    price: 120.0
     weight: 2.0
+    display-name: "§f铁锭"
   gold_ingot:
     material: GOLD_INGOT
-    amount: 8
-    price: 60.0
+    amount: 4
+    price: 180.0
     weight: 1.5
-  oak_log:
-    material: OAK_LOG
-    amount: 32
-    price: 20.0
+    display-name: "§e金锭"
+  coal:
+    material: COAL
+    amount: 16
+    price: 80.0
     weight: 3.0
-  cobblestone:
-    material: COBBLESTONE
-    amount: 64
-    price: 10.0
-    weight: 5.0
-  ender_pearl:
-    material: ENDER_PEARL
+    display-name: "§8煤炭"
+  redstone:
+    material: REDSTONE
+    amount: 16
+    price: 60.0
+    weight: 2.5
+    display-name: "§c红石"
+  lapis_lazuli:
+    material: LAPIS_LAZULI
+    amount: 16
+    price: 90.0
+    weight: 2.0
+    display-name: "§9青金石"
+  emerald:
+    material: EMERALD
+    amount: 2
+    price: 160.0
+    weight: 1.0
+    display-name: "§a绿宝石"
+  quartz:
+    material: QUARTZ
+    amount: 16
+    price: 100.0
+    weight: 2.0
+    display-name: "§f石英"
+  copper_ingot:
+    material: COPPER_INGOT
+    amount: 8
+    price: 70.0
+    weight: 2.5
+    display-name: "§6铜锭"
+  netherite_ingot:
+    material: NETHERITE_INGOT
+    amount: 1
+    price: 800.0
+    weight: 0.2
+    display-name: "§5下界合金锭"
+  # ===== 树苗类 =====
+  oak_sapling:
+    material: OAK_SAPLING
+    amount: 4
+    price: 40.0
+    weight: 3.0
+    display-name: "§a橡树树苗"
+  birch_sapling:
+    material: BIRCH_SAPLING
+    amount: 4
+    price: 40.0
+    weight: 3.0
+    display-name: "§f白桦树苗"
+  spruce_sapling:
+    material: SPRUCE_SAPLING
+    amount: 4
+    price: 40.0
+    weight: 3.0
+    display-name: "§a云杉树苗"
+  jungle_sapling:
+    material: JUNGLE_SAPLING
+    amount: 4
+    price: 50.0
+    weight: 2.0
+    display-name: "§a丛林树苗"
+  acacia_sapling:
+    material: ACACIA_SAPLING
+    amount: 4
+    price: 50.0
+    weight: 2.0
+    display-name: "§6金合欢树苗"
+  dark_oak_sapling:
+    material: DARK_OAK_SAPLING
+    amount: 4
+    price: 55.0
+    weight: 2.0
+    display-name: "§8深色橡树树苗"
+  cherry_sapling:
+    material: CHERRY_SAPLING
+    amount: 4
+    price: 70.0
+    weight: 1.5
+    display-name: "§d樱花树苗"
+  mangrove_propagule:
+    material: MANGROVE_PROPAGULE
+    amount: 4
+    price: 65.0
+    weight: 1.5
+    display-name: "§a红树胎生苗"
+  # ===== 种子类 =====
+  wheat_seeds:
+    material: WHEAT_SEEDS
+    amount: 16
+    price: 30.0
+    weight: 3.0
+    display-name: "§a小麦种子"
+  beetroot_seeds:
+    material: BEETROOT_SEEDS
+    amount: 16
+    price: 30.0
+    weight: 3.0
+    display-name: "§c甜菜根种子"
+  melon_seeds:
+    material: MELON_SEEDS
+    amount: 16
+    price: 40.0
+    weight: 2.5
+    display-name: "§a西瓜种子"
+  pumpkin_seeds:
+    material: PUMPKIN_SEEDS
+    amount: 16
+    price: 40.0
+    weight: 2.5
+    display-name: "§6南瓜种子"
+  torchflower_seeds:
+    material: TORCHFLOWER_SEEDS
     amount: 4
     price: 80.0
     weight: 1.0
+    display-name: "§e火把花种子"
+  pitcher_pod:
+    material: PITCHER_POD
+    amount: 4
+    price: 80.0
+    weight: 1.0
+    display-name: "§a投掷器荚"
+  # ===== 石头类 =====
+  stone:
+    material: STONE
+    amount: 32
+    price: 50.0
+    weight: 4.0
+    display-name: "§7石头"
+  cobblestone:
+    material: COBBLESTONE
+    amount: 64
+    price: 40.0
+    weight: 5.0
+    display-name: "§7圆石"
+  granite:
+    material: GRANITE
+    amount: 32
+    price: 45.0
+    weight: 3.0
+    display-name: "§c花岗岩"
+  diorite:
+    material: DIORITE
+    amount: 32
+    price: 45.0
+    weight: 3.0
+    display-name: "§f闪长岩"
+  andesite:
+    material: ANDESITE
+    amount: 32
+    price: 45.0
+    weight: 3.0
+    display-name: "§7安山岩"
+  sandstone:
+    material: SANDSTONE
+    amount: 32
+    price: 45.0
+    weight: 3.0
+    display-name: "§e砂岩"
   obsidian:
     material: OBSIDIAN
-    amount: 16
-    price: 70.0
+    amount: 8
+    price: 100.0
     weight: 1.5
+    display-name: "§5黑曜石"
+  netherrack:
+    material: NETHERRACK
+    amount: 32
+    price: 50.0
+    weight: 2.5
+    display-name: "§c下界岩"
 
 # 可出售物品池（商店会从中随机选择）
-# 玩家需手持对应物品点击商店物品进行出售
-# material: 可接受的物品材质
-# amount: 单次出售数量
-# price: 出售价格
-# weight: 随机权重
+# 玩家点击对应项后系统自动从背包扣除物品
+# 收购价格压得很低，鼓励玩家通过出售商店购买
 sell-items:
-  dirt:
-    material: DIRT
-    amount: 32
+  # ===== 基础方块 =====
+  cobblestone:
+    material: COBBLESTONE
+    amount: 64
     price: 5.0
-    weight: 3.0
-  gravel:
-    material: GRAVEL
-    amount: 16
+    weight: 5.0
+  oak_log:
+    material: OAK_LOG
+    amount: 32
     price: 8.0
-    weight: 2.0
-  wheat:
-    material: WHEAT
-    amount: 32
-    price: 15.0
-    weight: 2.5
-  sugar_cane:
-    material: SUGAR_CANE
-    amount: 32
-    price: 20.0
-    weight: 2.0
+    weight: 4.0
+  # ===== 怪物掉落物 =====
   rotten_flesh:
     material: ROTTEN_FLESH
-    amount: 16
-    price: 3.0
+    amount: 32
+    price: 2.0
     weight: 4.0
   bone:
     material: BONE
     amount: 16
-    price: 6.0
-    weight: 3.0
+    price: 3.0
+    weight: 3.5
   string:
     material: STRING
     amount: 16
-    price: 7.0
+    price: 4.0
+    weight: 3.5
+  spider_eye:
+    material: SPIDER_EYE
+    amount: 8
+    price: 3.0
     weight: 3.0
+  gunpowder:
+    material: GUNPOWDER
+    amount: 8
+    price: 8.0
+    weight: 2.5
+  ender_pearl:
+    material: ENDER_PEARL
+    amount: 4
+    price: 10.0
+    weight: 2.0
+  slime_ball:
+    material: SLIME_BALL
+    amount: 8
+    price: 6.0
+    weight: 2.5
+  blaze_rod:
+    material: BLAZE_ROD
+    amount: 2
+    price: 12.0
+    weight: 1.5
+  ghast_tear:
+    material: GHAST_TEAR
+    amount: 1
+    price: 20.0
+    weight: 1.0
+  phantom_membrane:
+    material: PHANTOM_MEMBRANE
+    amount: 2
+    price: 15.0
+    weight: 1.5
+  # ===== 农作物 =====
+  wheat:
+    material: WHEAT
+    amount: 32
+    price: 10.0
+    weight: 4.0
+  carrot:
+    material: CARROT
+    amount: 32
+    price: 10.0
+    weight: 4.0
+  potato:
+    material: POTATO
+    amount: 32
+    price: 10.0
+    weight: 4.0
+  # ===== 鱼类（价格稍高，鼓励玩家钓鱼）=====
+  cod:
+    material: COD
+    amount: 16
+    price: 20.0
+    weight: 3.0
+  salmon:
+    material: SALMON
+    amount: 16
+    price: 25.0
+    weight: 2.5
+  tropical_fish:
+    material: TROPICAL_FISH
+    amount: 4
+    price: 40.0
+    weight: 1.5
+  pufferfish:
+    material: PUFFERFISH
+    amount: 4
+    price: 35.0
+    weight: 1.5
+  ink_sac:
+    material: INK_SAC
+    amount: 16
+    price: 15.0
+    weight: 2.5
+  nautilus_shell:
+    material: NAUTILUS_SHELL
+    amount: 2
+    price: 50.0
+    weight: 1.0
+  prismarine_shard:
+    material: PRISMARINE_SHARD
+    amount: 8
+    price: 30.0
+    weight: 1.5
+  prismarine_crystals:
+    material: PRISMARINE_CRYSTALS
+    amount: 8
+    price: 35.0
+    weight: 1.5

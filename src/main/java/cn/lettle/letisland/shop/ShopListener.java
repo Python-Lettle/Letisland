@@ -13,11 +13,12 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 商店界面事件监听器
@@ -25,17 +26,23 @@ import java.util.Map;
  */
 public class ShopListener implements Listener {
 
+    private final JavaPlugin plugin;
     private final ShopManager shopManager;
     private final EconomyManager economyManager;
     private final String currencySymbol;
 
-    /** 记录打开商店的玩家，用于防止拖拽等操作 */
-    private final Map<java.util.UUID, Boolean> openShopPlayers = new HashMap<>();
+    /** 记录打开商店的玩家及其界面实例，用于定时更新刷新倒计时 */
+    private final Map<UUID, Inventory> openShops = new HashMap<>();
 
-    public ShopListener(@NotNull ShopManager shopManager, @NotNull EconomyManager economyManager) {
+    public ShopListener(@NotNull JavaPlugin plugin, @NotNull ShopManager shopManager,
+                        @NotNull EconomyManager economyManager) {
+        this.plugin = plugin;
         this.shopManager = shopManager;
         this.economyManager = economyManager;
         this.currencySymbol = economyManager.getCurrencySymbol();
+
+        // 启动定时任务，每秒更新刷新倒计时显示
+        Bukkit.getScheduler().runTaskTimer(plugin, this::updateRefreshDisplay, 20L, 20L);
     }
 
     /**
@@ -48,7 +55,7 @@ public class ShopListener implements Listener {
         Inventory inv = Bukkit.createInventory(new ShopHolder(), ShopManager.SHOP_SIZE, ShopManager.SHOP_TITLE);
         renderShop(inv);
         player.openInventory(inv);
-        openShopPlayers.put(player.getUniqueId(), true);
+        openShops.put(player.getUniqueId(), inv);
     }
 
     /**
@@ -63,24 +70,89 @@ public class ShopListener implements Listener {
         }
 
         // 填充分隔栏
-        ItemStack separator = createSeparator();
-        for (int i = ShopManager.SEPARATOR_START; i <= ShopManager.SEPARATOR_END; i++) {
-            inv.setItem(i, separator);
+        renderSeparator(inv);
+    }
+
+    /**
+     * 渲染分隔栏
+     * 左4格：灰色玻璃板，"↑上面是出售商店↑"
+     * 中1格：红色玻璃板，"还有xx分钟刷新商店"
+     * 右4格：灰色玻璃板，"↓下面是收购商店↓"
+     */
+    private void renderSeparator(@NotNull Inventory inv) {
+        ItemStack leftSep = createNamedPane(Material.GRAY_STAINED_GLASS_PANE, "§7↑上面是出售商店↑");
+        ItemStack rightSep = createNamedPane(Material.GRAY_STAINED_GLASS_PANE, "§7↓下面是收购商店↓");
+        ItemStack middleSep = createRefreshPane();
+
+        // 左4格
+        for (int i = ShopManager.SEPARATOR_START; i < ShopManager.SEPARATOR_START + 4; i++) {
+            inv.setItem(i, leftSep);
+        }
+        // 中1格
+        inv.setItem(ShopManager.SEPARATOR_START + 4, middleSep);
+        // 右4格
+        for (int i = ShopManager.SEPARATOR_START + 5; i <= ShopManager.SEPARATOR_END; i++) {
+            inv.setItem(i, rightSep);
         }
     }
 
     /**
-     * 创建分隔栏物品
+     * 创建带名称的玻璃板
      */
     @NotNull
-    private ItemStack createSeparator() {
-        ItemStack item = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+    private ItemStack createNamedPane(@NotNull Material material, @NotNull String name) {
+        ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(" ");
+            meta.setDisplayName(name);
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    /**
+     * 创建刷新倒计时玻璃板（红色）
+     */
+    @NotNull
+    private ItemStack createRefreshPane() {
+        long remaining = shopManager.getRemainingMinutes();
+        String name = "§c还有 §e" + remaining + " §c分钟刷新商店";
+        return createNamedPane(Material.RED_STAINED_GLASS_PANE, name);
+    }
+
+    /**
+     * 定时更新所有打开的商店界面的刷新倒计时显示
+     * 同时检查是否需要自动刷新
+     */
+    private void updateRefreshDisplay() {
+        if (openShops.isEmpty()) {
+            return;
+        }
+
+        // 检查是否到刷新时间
+        boolean needRefresh = shopManager.getRemainingMinutes() <= 0;
+        if (needRefresh) {
+            shopManager.refresh();
+        }
+
+        // 更新所有打开的商店界面
+        for (Map.Entry<UUID, Inventory> entry : openShops.entrySet()) {
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player == null || !player.isOnline()) {
+                openShops.remove(entry.getKey());
+                continue;
+            }
+            Inventory inv = entry.getValue();
+            // 如果刷新了，重新渲染整个商店
+            if (needRefresh) {
+                inv.clear();
+                renderShop(inv);
+            } else {
+                // 仅更新中间的刷新倒计时玻璃板
+                int middleSlot = ShopManager.SEPARATOR_START + 4;
+                inv.setItem(middleSlot, createRefreshPane());
+            }
+        }
     }
 
     @EventHandler
@@ -267,7 +339,7 @@ public class ShopListener implements Listener {
     @EventHandler
     public void onClose(@NotNull InventoryCloseEvent event) {
         if (event.getInventory().getHolder() instanceof ShopHolder) {
-            openShopPlayers.remove(event.getPlayer().getUniqueId());
+            openShops.remove(event.getPlayer().getUniqueId());
         }
     }
 

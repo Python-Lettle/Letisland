@@ -25,7 +25,7 @@ public final class Letisland extends JavaPlugin {
 
         // 初始化商店系统
         shopManager = new ShopManager(getDataFolder());
-        shopListener = new ShopListener(shopManager, economyManager);
+        shopListener = new ShopListener(this, shopManager, economyManager);
 
         // 注册命令
         EconomyCommand economyCommand = new EconomyCommand(economyManager);

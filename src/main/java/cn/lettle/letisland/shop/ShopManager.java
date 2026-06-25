@@ -296,6 +296,16 @@ public class ShopManager {
     }
 
     /**
+     * 获取距离下次刷新的剩余分钟数
+     */
+    public long getRemainingMinutes() {
+        long elapsed = System.currentTimeMillis() - lastRefreshTime;
+        long intervalMillis = refreshIntervalMinutes * 60 * 1000;
+        long remaining = intervalMillis - elapsed;
+        return Math.max(0, remaining / (60 * 1000));
+    }
+
+    /**
      * 在出售物品池中查找匹配的物品（用于玩家出售物品时查询价格）
      */
     @Nullable
