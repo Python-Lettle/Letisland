@@ -1,0 +1,96 @@
+# Letisland 商店配置文件
+
+settings:
+  # 商店随机刷新的购买物品数量（0-27）
+  buy-slot-count: 27
+  # 商店随机刷新的出售物品数量（0-18）
+  sell-slot-count: 18
+  # 自动刷新间隔（分钟）
+  refresh-interval-minutes: 30
+
+# 可购买物品池（商店会从中随机选择）
+# material: 物品材质（参考 https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html）
+# amount: 单次购买数量
+# price: 购买价格
+# weight: 随机权重（越大越容易被刷新到）
+# display-name: 自定义显示名称（可选）
+buy-items:
+  diamond:
+    material: DIAMOND
+    amount: 1
+    price: 100.0
+    weight: 1.0
+    display-name: "§b钻石"
+  iron_ingot:
+    material: IRON_INGOT
+    amount: 16
+    price: 50.0
+    weight: 2.0
+  gold_ingot:
+    material: GOLD_INGOT
+    amount: 8
+    price: 60.0
+    weight: 1.5
+  oak_log:
+    material: OAK_LOG
+    amount: 32
+    price: 20.0
+    weight: 3.0
+  cobblestone:
+    material: COBBLESTONE
+    amount: 64
+    price: 10.0
+    weight: 5.0
+  ender_pearl:
+    material: ENDER_PEARL
+    amount: 4
+    price: 80.0
+    weight: 1.0
+  obsidian:
+    material: OBSIDIAN
+    amount: 16
+    price: 70.0
+    weight: 1.5
+
+# 可出售物品池（商店会从中随机选择）
+# 玩家需手持对应物品点击商店物品进行出售
+# material: 可接受的物品材质
+# amount: 单次出售数量
+# price: 出售价格
+# weight: 随机权重
+sell-items:
+  dirt:
+    material: DIRT
+    amount: 32
+    price: 5.0
+    weight: 3.0
+  gravel:
+    material: GRAVEL
+    amount: 16
+    price: 8.0
+    weight: 2.0
+  wheat:
+    material: WHEAT
+    amount: 32
+    price: 15.0
+    weight: 2.5
+  sugar_cane:
+    material: SUGAR_CANE
+    amount: 32
+    price: 20.0
+    weight: 2.0
+  rotten_flesh:
+    material: ROTTEN_FLESH
+    amount: 16
+    price: 3.0
+    weight: 4.0
+  bone:
+    material: BONE
+    amount: 16
+    price: 6.0
+    weight: 3.0
+  string:
+    material: STRING
+    amount: 16
+    price: 7.0
+    weight: 3.0

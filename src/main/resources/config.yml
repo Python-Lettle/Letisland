@@ -1,0 +1,8 @@
+# Letisland 插件配置文件
+
+# 经济系统配置
+economy:
+  # 货币符号
+  currency-symbol: "$"
+  # 起始余额（新玩家加入时给予的金额，0 表示不给予）
+  starting-balance: 0.0

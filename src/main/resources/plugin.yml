@@ -7,3 +7,34 @@ load: POSTWORLD
 
 authors: [ Lettle ]
 website: lettle.cn
+
+commands:
+  economy:
+    description: 经济系统命令
+    usage: /economy help
+    aliases: [eco, money]
+    permission: letisland.economy.use
+  shop:
+    description: 商店系统命令
+    usage: /shop help
+    aliases: [store]
+    permission: letisland.shop.use
+
+permissions:
+  # 经济系统权限
+  letisland.economy.use:
+    description: 允许使用经济系统基础命令
+    default: true
+  letisland.economy.balance.others:
+    description: 允许查询其他玩家的余额
+    default: op
+  letisland.economy.admin:
+    description: 允许管理经济系统（给予、扣除、设置、重载）
+    default: op
+  # 商店系统权限
+  letisland.shop.use:
+    description: 允许使用商店
+    default: true
+  letisland.shop.admin:
+    description: 允许管理商店（手动刷新、热重载）
+    default: op
