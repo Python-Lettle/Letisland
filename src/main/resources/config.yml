@@ -6,3 +6,8 @@ economy:
   currency-symbol: "$"
   # 起始余额（新玩家加入时给予的金额，0 表示不给予）
   starting-balance: 0.0
+
+# 功能模块开关说明：
+# 商店系统开关存储在 shop.yml 的 settings.enabled 中
+# 刷石机系统开关存储在 generator.yml 的 enabled 中
+# 管理员可通过 /shop enable|disable 和 /generator enable|disable 随时切换

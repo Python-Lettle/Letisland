@@ -37,6 +37,9 @@ public class ShopManager {
     public static final int SELL_AREA_START = 36;
     public static final int SELL_AREA_END = 53;
 
+    /** 商店是否启用 */
+    private boolean enabled;
+
     /** 随机刷新的购买物品数量 */
     private int buySlotCount;
 
@@ -103,12 +106,29 @@ public class ShopManager {
     }
 
     /**
+     * 商店是否启用
+     */
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    /**
+     * 设置商店启用状态并保存
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        shopConfig.set("settings.enabled", enabled);
+        saveConfig();
+    }
+
+    /**
      * 解析配置内容
      */
     private void parseConfig() {
         buyPool.clear();
         sellPool.clear();
 
+        enabled = shopConfig.getBoolean("settings.enabled", true);
         buySlotCount = shopConfig.getInt("settings.buy-slot-count", 27);
         sellSlotCount = shopConfig.getInt("settings.sell-slot-count", 18);
         refreshIntervalMinutes = shopConfig.getLong("settings.refresh-interval-minutes", 30);

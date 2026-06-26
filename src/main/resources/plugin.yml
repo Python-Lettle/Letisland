@@ -19,6 +19,16 @@ commands:
     usage: /shop help
     aliases: [store]
     permission: letisland.shop.use
+  generator:
+    description: 刷石机系统命令
+    usage: /generator help
+    aliases: [gen]
+    permission: letisland.generator.use
+  fishing:
+    description: 钓鱼科技系统命令
+    usage: /fishing help
+    aliases: [fish]
+    permission: letisland.fishing.use
 
 permissions:
   # 经济系统权限
@@ -37,4 +47,18 @@ permissions:
     default: true
   letisland.shop.admin:
     description: 允许管理商店（手动刷新、热重载）
+    default: op
+  # 刷石机系统权限
+  letisland.generator.use:
+    description: 允许使用刷石机基础命令（查看、升级）
+    default: true
+  letisland.generator.admin:
+    description: 允许管理刷石机（设置等级、热重载）
+    default: op
+  # 钓鱼系统权限
+  letisland.fishing.use:
+    description: 允许使用钓鱼系统（查看等级、升级、出售）
+    default: true
+  letisland.fishing.admin:
+    description: 允许管理钓鱼系统（设置等级、热重载、开关）
     default: op

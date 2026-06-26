@@ -1,0 +1,281 @@
+# Letisland 钓鱼科技配置文件
+
+# 钓鱼系统开关
+enabled: true
+
+# 玩家钓鱼数据存储（由插件自动维护）
+players: {}
+
+# 钓鱼科技等级配置
+# exp-to-next: 升到下一级所需经验值
+# upgrade-cost: 升级需要消耗的材料
+#   material: 物品材质
+#   display-name: 显示名称（在GUI中展示给玩家）
+#   amount: 数量
+levels:
+  1:
+    name: "初级钓鱼"
+    exp-to-next: 100
+    upgrade-cost:
+      - material: IRON_INGOT
+        display-name: "铁锭"
+        amount: 16
+      - material: OAK_LOG
+        display-name: "橡木原木"
+        amount: 32
+      - material: COBBLESTONE
+        display-name: "圆石"
+        amount: 64
+  2:
+    name: "中级钓鱼"
+    exp-to-next: 300
+    upgrade-cost:
+      - material: IRON_INGOT
+        display-name: "铁锭"
+        amount: 64
+      - material: OAK_LOG
+        display-name: "橡木原木"
+        amount: 64
+      - material: COBBLESTONE
+        display-name: "圆石"
+        amount: 128
+  3:
+    name: "高级钓鱼"
+    exp-to-next: 600
+    upgrade-cost:
+      - material: GOLD_INGOT
+        display-name: "金锭"
+        amount: 32
+      - material: BIRCH_LOG
+        display-name: "白桦原木"
+        amount: 64
+      - material: IRON_INGOT
+        display-name: "铁锭"
+        amount: 64
+  4:
+    name: "专家钓鱼"
+    exp-to-next: 1200
+    upgrade-cost:
+      - material: DIAMOND
+        display-name: "钻石"
+        amount: 16
+      - material: GOLD_INGOT
+        display-name: "金锭"
+        amount: 64
+      - material: SPRUCE_LOG
+        display-name: "云杉原木"
+        amount: 64
+  5:
+    name: "大师钓鱼"
+    exp-to-next: 0
+    upgrade-cost: []
+
+# 自定义鱼类配置
+# tier: 鱼的等级（1-普通, 2-罕见, 3-稀有, 4-史诗, 5-传说）
+# min-weight / max-weight: 重量范围（单位：公斤）
+# base-value: 基础出售价格（实际价格 = base-value * weight）
+# weight: 钓到此鱼的随机权重（玩家等级达到tier后才有概率钓到）
+fish:
+  # ===== 1级鱼（普通）=====
+  sardine:
+    name: "沙丁鱼"
+    tier: 1
+    material: COD
+    min-weight: 0.1
+    max-weight: 0.5
+    base-value: 5.0
+    weight: 40.0
+  mackerel:
+    name: "鲭鱼"
+    tier: 1
+    material: COD
+    min-weight: 0.2
+    max-weight: 0.8
+    base-value: 6.0
+    weight: 35.0
+  carp:
+    name: "鲤鱼"
+    tier: 1
+    material: SALMON
+    min-weight: 0.3
+    max-weight: 1.5
+    base-value: 8.0
+    weight: 25.0
+
+  # ===== 2级鱼（罕见）=====
+  bass:
+    name: "鲈鱼"
+    tier: 2
+    material: COD
+    min-weight: 0.5
+    max-weight: 2.0
+    base-value: 12.0
+    weight: 30.0
+  trout:
+    name: "鳟鱼"
+    tier: 2
+    material: SALMON
+    min-weight: 0.4
+    max-weight: 1.8
+    base-value: 14.0
+    weight: 25.0
+  catfish:
+    name: "鲶鱼"
+    tier: 2
+    material: COD
+    min-weight: 1.0
+    max-weight: 3.5
+    base-value: 16.0
+    weight: 20.0
+
+  # ===== 3级鱼（稀有）=====
+  tuna:
+    name: "金枪鱼"
+    tier: 3
+    material: SALMON
+    min-weight: 5.0
+    max-weight: 20.0
+    base-value: 3.0
+    weight: 25.0
+  salmon_king:
+    name: "帝王鲑"
+    tier: 3
+    material: SALMON
+    min-weight: 3.0
+    max-weight: 12.0
+    base-value: 5.0
+    weight: 20.0
+  swordfish:
+    name: "剑鱼"
+    tier: 3
+    material: COD
+    min-weight: 8.0
+    max-weight: 30.0
+    base-value: 4.0
+    weight: 15.0
+
+  # ===== 4级鱼（史诗）=====
+  shark:
+    name: "深海鲨"
+    tier: 4
+    material: COD
+    min-weight: 20.0
+    max-weight: 80.0
+    base-value: 2.0
+    weight: 30.0
+  manta_ray:
+    name: "巨型蝠鲼"
+    tier: 4
+    material: SALMON
+    min-weight: 30.0
+    max-weight: 100.0
+    base-value: 2.5
+    weight: 20.0
+  golden_fish:
+    name: "黄金鱼"
+    tier: 4
+    material: TROPICAL_FISH
+    min-weight: 0.5
+    max-weight: 2.0
+    base-value: 80.0
+    weight: 15.0
+
+  # ===== 5级鱼（传说）=====
+  kraken:
+    name: "克拉肯触手"
+    tier: 5
+    material: INK_SAC
+    min-weight: 50.0
+    max-weight: 200.0
+    base-value: 1.5
+    weight: 20.0
+  sea_dragon:
+    name: "海龙"
+    tier: 5
+    material: PUFFERFISH
+    min-weight: 30.0
+    max-weight: 150.0
+    base-value: 2.0
+    weight: 15.0
+  leviathan:
+    name: "利维坦鳞片"
+    tier: 5
+    material: NAUTILUS_SHELL
+    min-weight: 100.0
+    max-weight: 500.0
+    base-value: 10.0
+    weight: 5.0
+
+# 钓鱼时的额外奖励概率
+fishing-rewards:
+  # 钓到自定义鱼的概率（否则钓到原版物品）
+  custom-fish-chance: 0.70
+  # 钓到经验值道具的概率
+  exp-item-chance: 0.10
+  # 触发buff的概率
+  buff-chance: 0.2
+
+# 经验值道具配置
+exp-item:
+  name: "钓鱼经验卷轴"
+  material: PAPER
+  # 每个道具给予的经验值范围
+  min-exp: 10
+  max-exp: 50
+
+# BUFF配置
+# type: GOOD(增益) / BAD(减益)
+# effect: 药水效果名称
+# duration: 持续时间（秒）
+# amplifier: 效果等级（0开始）
+# weight: 触发权重
+buffs:
+  regeneration:
+    name: "生命恢复"
+    type: GOOD
+    effect: REGENERATION
+    duration: 10
+    amplifier: 1
+    weight: 20.0
+  saturation:
+    name: "饱和"
+    type: GOOD
+    effect: SATURATION
+    duration: 5
+    amplifier: 0
+    weight: 20.0
+  speed:
+    name: "速度提升"
+    type: GOOD
+    effect: SPEED
+    duration: 30
+    amplifier: 1
+    weight: 15.0
+  healing:
+    name: "瞬间治疗"
+    type: GOOD
+    effect: HEAL
+    duration: 1
+    amplifier: 0
+    weight: 15.0
+  poison:
+    name: "中毒"
+    type: BAD
+    effect: POISON
+    duration: 8
+    amplifier: 0
+    weight: 15.0
+  nausea:
+    name: "反胃"
+    type: BAD
+    effect: CONFUSION
+    duration: 10
+    amplifier: 0
+    weight: 10.0
+  weakness:
+    name: "虚弱"
+    type: BAD
+    effect: WEAKNESS
+    duration: 15
+    amplifier: 0
+    weight: 10.0

@@ -1,6 +1,8 @@
 # Letisland 商店配置文件
 
 settings:
+  # 商店系统开关（管理员可通过 /shop enable|disable 切换）
+  enabled: true
   # 商店随机刷新的购买物品数量（0-27）
   buy-slot-count: 27
   # 商店随机刷新的出售物品数量（0-18）
