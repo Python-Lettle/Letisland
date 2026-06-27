@@ -22,7 +22,7 @@ players: {}
 #       amount: 数量
 #     留空或不存在则表示解锁方式未知，点击时提示"该称号解锁条件未知"
 titles:
-  # ===== 测试称号 =====
+  # ===== 基础称号 =====
   fisherman:
     name: "渔民"
     color: "§b"
@@ -32,3 +32,181 @@ titles:
       - material: TROPICAL_FISH
         display-name: "小丑鱼"
         amount: 1
+
+  # ===== 农耕类 =====
+  farmer:
+    name: "农夫"
+    color: "§a"
+    description: "脚踏黄土，手握丰收，你已掌握耕作之道"
+    unlock-method: "上交农作物各16个"
+    unlock-items:
+      - material: WHEAT
+        display-name: "小麦"
+        amount: 16
+      - material: CARROT
+        display-name: "胡萝卜"
+        amount: 16
+      - material: POTATO
+        display-name: "马铃薯"
+        amount: 16
+
+  # ===== 挖矿类 =====
+  miner:
+    name: "矿工"
+    color: "§6"
+    description: "深入地心，挥镐不止，矿物在你手中闪耀"
+    unlock-method: "上交各类矿石"
+    unlock-items:
+      - material: COAL
+        display-name: "煤炭"
+        amount: 32
+      - material: IRON_INGOT
+        display-name: "铁锭"
+        amount: 32
+      - material: GOLD_INGOT
+        display-name: "金锭"
+        amount: 8
+      - material: DIAMOND
+        display-name: "钻石"
+        amount: 4
+
+  # ===== 战斗类 =====
+  hunter:
+    name: "猎人"
+    color: "§c"
+    description: "夜幕下的追猎者，怪物闻风丧胆"
+    unlock-method: "上交怪物掉落物"
+    unlock-items:
+      - material: ROTTEN_FLESH
+        display-name: "腐肉"
+        amount: 32
+      - material: BONE
+        display-name: "骨头"
+        amount: 32
+      - material: GUNPOWDER
+        display-name: "火药"
+        amount: 16
+      - material: SPIDER_EYE
+        display-name: "蜘蛛眼"
+        amount: 8
+
+  # ===== 美食类 =====
+  gourmet:
+    name: "美食家"
+    color: "§d"
+    description: "品遍海中珍味，舌尝人间百态"
+    unlock-method: "上交各种鱼类"
+    unlock-items:
+      - material: COD
+        display-name: "鳕鱼"
+        amount: 16
+      - material: SALMON
+        display-name: "鲑鱼"
+        amount: 16
+      - material: TROPICAL_FISH
+        display-name: "热带鱼"
+        amount: 8
+      - material: PUFFERFISH
+        display-name: "河豚"
+        amount: 8
+
+  # ===== 收藏类 =====
+  collector:
+    name: "收藏家"
+    color: "§e"
+    description: "万物皆可收藏，你的箱子永远不够用"
+    unlock-method: "上交海洋珍稀物品"
+    unlock-items:
+      - material: NAUTILUS_SHELL
+        display-name: "鹦鹉螺壳"
+        amount: 2
+      - material: INK_SAC
+        display-name: "墨囊"
+        amount: 4
+      - material: SPONGE
+        display-name: "海绵"
+        amount: 8
+      - material: HEART_OF_THE_SEA
+        display-name: "海洋之心"
+        amount: 1
+
+  # ===== 财富类 =====
+  tycoon:
+    name: "富豪"
+    color: "§e"
+    description: "富可敌国，挥金如土，财富不过是数字"
+    unlock-method: "上交贵重金属块"
+    unlock-items:
+      - material: DIAMOND_BLOCK
+        display-name: "钻石块"
+        amount: 2
+      - material: GOLD_BLOCK
+        display-name: "金块"
+        amount: 2
+      - material: EMERALD_BLOCK
+        display-name: "绿宝石块"
+        amount: 2
+
+  # ===== 钓鱼进阶 =====
+  fishing_master:
+    name: "钓鱼大师"
+    color: "§9"
+    description: "竿起竿落间，鱼群尽入囊中"
+    unlock-method: "上交大量鱼类及海洋珍宝"
+    unlock-items:
+      - material: COD
+        display-name: "鳕鱼"
+        amount: 64
+      - material: SALMON
+        display-name: "鲑鱼"
+        amount: 64
+      - material: NAUTILUS_SHELL
+        display-name: "鹦鹉螺壳"
+        amount: 16
+      - material: HEART_OF_THE_SEA
+        display-name: "海洋之心"
+        amount: 4
+
+  # ===== 海洋传说 =====
+  sea_king:
+    name: "海王"
+    color: "§3"
+    description: "海洋的主宰，连波塞冬也甘拜下风"
+    unlock-method: "上交三叉戟与海洋珍宝"
+    unlock-items:
+      - material: TRIDENT
+        display-name: "三叉戟"
+        amount: 1
+      - material: HEART_OF_THE_SEA
+        display-name: "海洋之心"
+        amount: 1
+      - material: NAUTILUS_SHELL
+        display-name: "鹦鹉螺壳"
+        amount: 16
+      - material: SPONGE
+        display-name: "海绵"
+        amount: 16
+
+  # ===== 终极称号 =====
+  sky_lord:
+    name: "天空之主"
+    color: "§f"
+    description: "翱翔天际，俯瞰众生，空岛之巅唯你独尊"
+    unlock-method: "上交末影龙遗物与下界之星"
+    unlock-items:
+      - material: ELYTRA
+        display-name: "鞘翅"
+        amount: 1
+      - material: NETHER_STAR
+        display-name: "下界之星"
+        amount: 1
+      - material: DRAGON_HEAD
+        display-name: "龙首"
+        amount: 1
+
+  # ===== 神秘称号（无 unlock-items，点击提示"该称号解锁条件未知"）=====
+  mystery:
+    name: "神秘人"
+    color: "§5"
+    description: "来历不明，身份成谜，无人知晓如何才能遇见"
+    unlock-method: "?????"
