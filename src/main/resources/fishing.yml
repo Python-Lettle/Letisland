@@ -3,6 +3,14 @@
 # 钓鱼系统开关
 enabled: true
 
+# 自动出售设置
+auto-sell:
+  # 是否允许玩家使用自动出售功能
+  enabled: true
+  # 默认自动出售等级（0=关闭，1-5=自动出售该等级及以下的鱼）
+  # 玩家可通过 /fishing autosell <等级> 自行设置
+  default-tier: 0
+
 # 玩家钓鱼数据存储（由插件自动维护）
 players: {}
 

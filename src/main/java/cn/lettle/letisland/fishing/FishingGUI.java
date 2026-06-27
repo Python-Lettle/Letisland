@@ -29,6 +29,7 @@ public class FishingGUI implements Listener {
     // GUI标题
     private static final String LEVEL_GUI_TITLE = "§6§l钓鱼科技";
     private static final String SELL_GUI_TITLE = "§6§l鱼市场 - 出售鱼类";
+    private static final String CODEX_GUI_TITLE = "§6§l鱼类图鉴";
 
     // 等级GUI的槽位
     private static final int INFO_SLOT = 13;       // 信息显示
@@ -155,6 +156,78 @@ public class FishingGUI implements Listener {
         player.openInventory(inv);
     }
 
+    // ==================== 图鉴GUI ====================
+
+    public void openCodexGUI(@NotNull Player player) {
+        // 计算需要的行数（每行9格，至少1行）
+        int fishCount = fishingManager.getFishConfigs().size();
+        int rows = Math.min(6, (int) Math.ceil((fishCount + 9) / 9.0)); // 最后一行留空给返回按钮
+        int size = rows * 9;
+
+        Inventory inv = Bukkit.createInventory(null, size, CODEX_GUI_TITLE);
+
+        UUID playerId = player.getUniqueId();
+        int slot = 0;
+
+        for (FishingManager.FishConfig fish : fishingManager.getFishConfigs().values()) {
+            boolean discovered = fishingManager.hasDiscovered(playerId, fish.getId());
+
+            if (discovered) {
+                // 已发现：显示鱼的真实信息
+                ItemStack item = new ItemStack(fish.getMaterial());
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    String tierColor = FishingManager.getTierColor(fish.getTier());
+                    meta.setDisplayName(tierColor + fish.getName());
+
+                    List<String> lore = new ArrayList<>();
+                    lore.add("§7品质: " + tierColor + FishingManager.getTierName(fish.getTier()));
+                    int count = fishingManager.getCodexCount(playerId, fish.getId());
+                    double maxWeight = fishingManager.getCodexMaxWeight(playerId, fish.getId());
+                    lore.add("§7钓到次数: §e" + count);
+                    lore.add("§7最高纪录: §e" + maxWeight + " kg");
+                    lore.add("§7重量范围: §f" + fish.getMinWeight() + " - " + fish.getMaxWeight() + " kg");
+                    lore.add("§7基础价值: §e" + economyManager.format(fish.getBaseValue()) + "/kg");
+                    meta.setLore(lore);
+                    item.setItemMeta(meta);
+                }
+                inv.setItem(slot, item);
+            } else {
+                // 未发现：显示为未知道具
+                ItemStack unknown = new ItemStack(Material.BARRIER);
+                ItemMeta meta = unknown.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName("§7??? 未知鱼类");
+                    List<String> lore = new ArrayList<>();
+                    lore.add("§8品质: " + FishingManager.getTierColor(fish.getTier()) + FishingManager.getTierName(fish.getTier()));
+                    lore.add("");
+                    lore.add("§8尚未发现此鱼类");
+                    meta.setLore(lore);
+                    unknown.setItemMeta(meta);
+                }
+                inv.setItem(slot, unknown);
+            }
+            slot++;
+        }
+
+        // 底部最后一格放返回按钮
+        int backSlot = size - 1;
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        if (backMeta != null) {
+            backMeta.setDisplayName("§c关闭");
+            back.setItemMeta(backMeta);
+        }
+        inv.setItem(backSlot, back);
+
+        int discovered = fishingManager.getDiscoveredCount(playerId);
+        int total = fishingManager.getFishConfigs().size();
+        player.sendMessage("§6[图鉴] §7已发现 §e" + discovered + "§7/§e" + total + " §7种鱼类");
+
+        openGUIs.put(player.getUniqueId(), "codex");
+        player.openInventory(inv);
+    }
+
     // ==================== 事件处理 ====================
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -164,7 +237,7 @@ public class FishingGUI implements Listener {
         if (guiType == null) return;
 
         String title = event.getView().getTitle();
-        if (!title.equals(LEVEL_GUI_TITLE) && !title.equals(SELL_GUI_TITLE)) return;
+        if (!title.equals(LEVEL_GUI_TITLE) && !title.equals(SELL_GUI_TITLE) && !title.equals(CODEX_GUI_TITLE)) return;
 
         event.setCancelled(true);
 
@@ -172,6 +245,17 @@ public class FishingGUI implements Listener {
             handleLevelClick(event, player);
         } else if (guiType.equals("sell")) {
             handleSellClick(event, player);
+        } else if (guiType.equals("codex")) {
+            handleCodexClick(event, player);
+        }
+    }
+
+    private void handleCodexClick(InventoryClickEvent event, Player player) {
+        int slot = event.getRawSlot();
+        Inventory inv = event.getInventory();
+        // 点击最后一格的关闭按钮
+        if (slot == inv.getSize() - 1) {
+            player.closeInventory();
         }
     }
 

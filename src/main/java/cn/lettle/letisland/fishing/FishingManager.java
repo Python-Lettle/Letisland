@@ -59,6 +59,10 @@ public class FishingManager {
     private int expItemMinExp;
     private int expItemMaxExp;
 
+    /** 自动出售配置 */
+    private boolean autoSellEnabled;
+    private int autoSellDefaultTier;
+
     public FishingManager(@NotNull JavaPlugin plugin, @NotNull EconomyManager economyManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
@@ -187,6 +191,10 @@ public class FishingManager {
                 buffConfigs.put(id, new BuffConfig(id, name, type, effect, duration, amplifier, weight));
             }
         }
+
+        // 解析自动出售配置
+        autoSellEnabled = fishingConfig.getBoolean("auto-sell.enabled", true);
+        autoSellDefaultTier = fishingConfig.getInt("auto-sell.default-tier", 0);
     }
 
     // ==================== 玩家数据 ====================
@@ -219,6 +227,86 @@ public class FishingManager {
             }
         }
         setPlayerData(playerId, level, exp);
+    }
+
+    // ==================== 自动出售 ====================
+
+    public boolean isAutoSellEnabled() {
+        return autoSellEnabled;
+    }
+
+    public int getAutoSellDefaultTier() {
+        return autoSellDefaultTier;
+    }
+
+    /**
+     * 获取玩家自动出售等级（0=关闭）
+     */
+    public int getAutoSellTier(@NotNull UUID playerId) {
+        return fishingConfig.getInt("players." + playerId + ".auto-sell-tier", autoSellDefaultTier);
+    }
+
+    /**
+     * 设置玩家自动出售等级
+     */
+    public void setAutoSellTier(@NotNull UUID playerId, int tier) {
+        fishingConfig.set("players." + playerId + ".auto-sell-tier", tier);
+        saveConfig();
+    }
+
+    /**
+     * 检查鱼是否应该自动出售
+     */
+    public boolean shouldAutoSell(@NotNull UUID playerId, int fishTier) {
+        if (!autoSellEnabled) return false;
+        int tier = getAutoSellTier(playerId);
+        return tier > 0 && fishTier <= tier;
+    }
+
+    // ==================== 鱼类图鉴 ====================
+
+    /**
+     * 记录玩家钓到鱼（图鉴数据）
+     */
+    public void recordFishCatch(@NotNull UUID playerId, @NotNull String fishId, double weight) {
+        String base = "players." + playerId + ".codex." + fishId;
+        int count = fishingConfig.getInt(base + ".count", 0);
+        double maxWeight = fishingConfig.getDouble(base + ".max-weight", 0.0);
+
+        fishingConfig.set(base + ".count", count + 1);
+        if (weight > maxWeight) {
+            fishingConfig.set(base + ".max-weight", weight);
+        }
+        saveConfig();
+    }
+
+    /**
+     * 获取玩家某鱼的钓到次数
+     */
+    public int getCodexCount(@NotNull UUID playerId, @NotNull String fishId) {
+        return fishingConfig.getInt("players." + playerId + ".codex." + fishId + ".count", 0);
+    }
+
+    /**
+     * 获取玩家某鱼的最高重量纪录
+     */
+    public double getCodexMaxWeight(@NotNull UUID playerId, @NotNull String fishId) {
+        return fishingConfig.getDouble("players." + playerId + ".codex." + fishId + ".max-weight", 0.0);
+    }
+
+    /**
+     * 检查玩家是否已发现某种鱼
+     */
+    public boolean hasDiscovered(@NotNull UUID playerId, @NotNull String fishId) {
+        return fishingConfig.contains("players." + playerId + ".codex." + fishId);
+    }
+
+    /**
+     * 获取玩家已发现的鱼类数量
+     */
+    public int getDiscoveredCount(@NotNull UUID playerId) {
+        ConfigurationSection codex = fishingConfig.getConfigurationSection("players." + playerId + ".codex");
+        return codex != null ? codex.getKeys(false).size() : 0;
     }
 
     /**
@@ -526,6 +614,8 @@ public class FishingManager {
     public double getCustomFishChance() { return customFishChance; }
     public double getExpItemChance() { return expItemChance; }
     public double getBuffChance() { return buffChance; }
+
+    public EconomyManager getEconomyManager() { return economyManager; }
 
     public NamespacedKey getFishIdKey() { return fishIdKey; }
     public NamespacedKey getFishWeightKey() { return fishWeightKey; }

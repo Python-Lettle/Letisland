@@ -79,12 +79,24 @@ public class FishingListener implements Listener {
             FishingManager.FishConfig fish = fishingManager.rollFish(level);
             if (fish != null) {
                 double weight = fishingManager.rollWeight(fish);
-                ItemStack fishItem = fishingManager.createFishItem(fish, weight);
                 event.setCancelled(true);
-                // 直接将物品给予玩家
-                player.getWorld().dropItemNaturally(player.getLocation(), fishItem);
-                player.sendMessage("§b[钓鱼] §a你钓到了一条 §e" + fish.getName() +
-                        " §a(§f" + weight + " kg§a)！");
+
+                // 记录到图鉴
+                fishingManager.recordFishCatch(playerId, fish.getId(), weight);
+
+                // 检查是否自动出售
+                if (fishingManager.shouldAutoSell(playerId, fish.getTier())) {
+                    double value = fishingManager.calculateFishValue(fish, weight);
+                    fishingManager.getEconomyManager().deposit(player, value);
+                    player.sendMessage("§b[钓鱼] §a钓到 §e" + fish.getName() +
+                            " §a(§f" + weight + " kg§a) 已自动出售，获得 §e" +
+                            fishingManager.getEconomyManager().format(value));
+                } else {
+                    ItemStack fishItem = fishingManager.createFishItem(fish, weight);
+                    player.getWorld().dropItemNaturally(player.getLocation(), fishItem);
+                    player.sendMessage("§b[钓鱼] §a你钓到了一条 §e" + fish.getName() +
+                            " §a(§f" + weight + " kg§a)！");
+                }
             }
         } else if (roll < fishChance + expChance) {
             // 钓到经验道具

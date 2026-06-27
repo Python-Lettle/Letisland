@@ -611,10 +611,33 @@ buffs:
 | `/fishing info` | `letisland.fishing.use` | 查看钓鱼等级信息 |
 | `/fishing upgrade` | `letisland.fishing.use` | 打开钓鱼等级升级GUI |
 | `/fishing sell` | `letisland.fishing.use` | 打开鱼市场出售GUI |
+| `/fishing codex` | `letisland.fishing.use` | 打开鱼类图鉴 |
+| `/fishing autosell [0-5]` | `letisland.fishing.use` | 设置/查看自动出售等级 |
 | `/fishing set <玩家> <等级>` | `letisland.fishing.admin` | 设置玩家钓鱼等级 |
 | `/fishing reload` | `letisland.fishing.admin` | 热重载配置 |
 | `/fishing enable` | `letisland.fishing.admin` | 启用钓鱼系统 |
 | `/fishing disable` | `letisland.fishing.admin` | 关闭钓鱼系统 |
+
+### 自动出售
+
+玩家可以设置自动出售等级，钓鱼时品质 <= 设定等级的鱼将自动出售为金币，不占用背包。
+
+- `/fishing autosell` - 查看当前设置
+- `/fishing autosell 0` - 关闭自动出售
+- `/fishing autosell 3` - 自动出售稀有(3级)及以下的鱼
+
+### 鱼类图鉴
+
+输入 `/fishing codex` 打开鱼类图鉴GUI：
+
+- 图鉴展示所有可钓到的鱼类
+- **未发现的鱼**显示为 `??? 未知鱼类`（障幕方块）
+- **已发现的鱼**显示真实信息，包括：
+  - 鱼的名称和品质颜色
+  - 钓到次数
+  - 最高重量纪录
+  - 重量范围和基础价值
+- 每次钓到自定义鱼时自动记录到图鉴
 
 ### 权限
 

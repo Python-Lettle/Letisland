@@ -53,6 +53,8 @@ public class FishingCommand implements CommandExecutor, TabCompleter {
             case "info" -> handleInfo(sender);
             case "sell" -> handleSell(sender);
             case "upgrade" -> handleUpgrade(sender);
+            case "codex" -> handleCodex(sender);
+            case "autosell" -> handleAutoSell(sender, args);
             case "set" -> handleSet(sender, args);
             case "reload" -> handleReload(sender);
             case "enable" -> handleToggle(sender, true);
@@ -108,6 +110,59 @@ public class FishingCommand implements CommandExecutor, TabCompleter {
             return;
         }
         fishingGUI.openLevelGUI(player);
+    }
+
+    private void handleCodex(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§c只有玩家可以打开GUI");
+            return;
+        }
+        if (!fishingManager.isEnabled()) {
+            sender.sendMessage("§c钓鱼系统已关闭");
+            return;
+        }
+        fishingGUI.openCodexGUI(player);
+    }
+
+    private void handleAutoSell(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§c只有玩家可以设置自动出售");
+            return;
+        }
+        if (!fishingManager.isEnabled()) {
+            sender.sendMessage("§c钓鱼系统已关闭");
+            return;
+        }
+        if (!fishingManager.isAutoSellEnabled()) {
+            sender.sendMessage("§c自动出售功能已被管理员关闭");
+            return;
+        }
+
+        if (args.length < 2) {
+            int current = fishingManager.getAutoSellTier(player.getUniqueId());
+            sender.sendMessage("§6===== 自动出售设置 =====");
+            sender.sendMessage("§7当前等级: §e" + (current == 0 ? "关闭" : FishingManager.getTierName(current)));
+            sender.sendMessage("§7说明: 设置为N时，等级≤N的鱼将自动出售为金币");
+            sender.sendMessage("§7可用: §e/fishing autosell 0 §7(关闭) ~ §e/fishing autosell 5");
+            return;
+        }
+
+        try {
+            int tier = Integer.parseInt(args[1]);
+            if (tier < 0 || tier > 5) {
+                sender.sendMessage("§c等级范围: 0-5（0=关闭，1-5=对应品质等级）");
+                return;
+            }
+            fishingManager.setAutoSellTier(player.getUniqueId(), tier);
+            if (tier == 0) {
+                player.sendMessage("§a自动出售已关闭");
+            } else {
+                player.sendMessage("§a自动出售已设置为 §e" + FishingManager.getTierName(tier) +
+                        " §a及以下品质的鱼将自动出售");
+            }
+        } catch (NumberFormatException e) {
+            sender.sendMessage("§c请输入有效的数字（0-5）");
+        }
     }
 
     private void handleSet(CommandSender sender, String[] args) {
@@ -166,6 +221,8 @@ public class FishingCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/fishing §7- 查看钓鱼等级信息");
         sender.sendMessage("§e/fishing upgrade §7- 打开钓鱼等级升级GUI");
         sender.sendMessage("§e/fishing sell §7- 打开鱼出售GUI");
+        sender.sendMessage("§e/fishing codex §7- 打开鱼类图鉴");
+        sender.sendMessage("§e/fishing autosell [0-5] §7- 设置/查看自动出售等级");
         if (sender.hasPermission("letisland.fishing.admin")) {
             sender.sendMessage("§e/fishing set <玩家> <等级> §7- 设置玩家等级");
             sender.sendMessage("§e/fishing reload §7- 热重载配置");
@@ -182,6 +239,8 @@ public class FishingCommand implements CommandExecutor, TabCompleter {
             subs.add("info");
             subs.add("upgrade");
             subs.add("sell");
+            subs.add("codex");
+            subs.add("autosell");
             if (sender.hasPermission("letisland.fishing.admin")) {
                 subs.add("set");
                 subs.add("reload");
@@ -197,6 +256,15 @@ public class FishingCommand implements CommandExecutor, TabCompleter {
             return Bukkit.getOnlinePlayers().stream()
                     .map(Player::getName)
                     .filter(n -> n.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("autosell")) {
+            List<String> tiers = new ArrayList<>();
+            for (int i = 0; i <= 5; i++) {
+                tiers.add(String.valueOf(i));
+            }
+            return tiers.stream()
+                    .filter(s -> s.startsWith(args[1]))
                     .collect(Collectors.toList());
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("set") &&
