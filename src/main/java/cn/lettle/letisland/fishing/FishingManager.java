@@ -148,8 +148,11 @@ public class FishingManager {
                 double maxWeight = fs.getDouble("max-weight", 1.0);
                 double baseValue = fs.getDouble("base-value", 1.0);
                 double weight = fs.getDouble("weight", 10.0);
+                // 自定义模型数据（用于资源包替换材质；<=0 表示不设置，使用基础材质贴图）
+                int customModelData = fs.getInt("custom-model-data", 0);
 
-                fishConfigs.put(id, new FishConfig(id, name, tier, material, minWeight, maxWeight, baseValue, weight));
+                fishConfigs.put(id, new FishConfig(id, name, tier, material, minWeight, maxWeight,
+                        baseValue, weight, customModelData));
             }
         }
 
@@ -432,6 +435,11 @@ public class FishingManager {
         lore.add("§8可用于出售");
         meta.setLore(lore);
 
+        // 应用自定义材质（CustomModelData）
+        // 鲁棒性：未配置(<=0)时不调用 setCustomModelData，客户端将按基础材质渲染；
+        //        若配置了但客户端未安装资源包，则会按基础材质回退显示，无副作用。
+        applyFishCustomModel(meta, fish);
+
         // 使用 PersistentDataContainer 存储自定义数据
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         pdc.set(fishIdKey, PersistentDataType.STRING, fish.getId());
@@ -439,6 +447,17 @@ public class FishingManager {
 
         item.setItemMeta(meta);
         return item;
+    }
+
+    /**
+     * 为物品Meta应用鱼的CustomModelData（如果配置了的话）
+     * 可在创建鱼物品或图鉴物品等场景复用
+     */
+    public void applyFishCustomModel(@NotNull ItemMeta meta, @NotNull FishConfig fish) {
+        int cmd = fish.getCustomModelData();
+        if (cmd > 0) {
+            meta.setCustomModelData(cmd);
+        }
     }
 
     /**
@@ -667,9 +686,11 @@ public class FishingManager {
         private final double maxWeight;
         private final double baseValue;
         private final double weight;
+        private final int customModelData;
 
         public FishConfig(String id, String name, int tier, Material material,
-                          double minWeight, double maxWeight, double baseValue, double weight) {
+                          double minWeight, double maxWeight, double baseValue, double weight,
+                          int customModelData) {
             this.id = id;
             this.name = name;
             this.tier = tier;
@@ -678,6 +699,7 @@ public class FishingManager {
             this.maxWeight = maxWeight;
             this.baseValue = baseValue;
             this.weight = weight;
+            this.customModelData = customModelData;
         }
 
         public String getId() { return id; }
@@ -688,6 +710,7 @@ public class FishingManager {
         public double getMaxWeight() { return maxWeight; }
         public double getBaseValue() { return baseValue; }
         public double getWeight() { return weight; }
+        public int getCustomModelData() { return customModelData; }
     }
 
     public static class BuffConfig {

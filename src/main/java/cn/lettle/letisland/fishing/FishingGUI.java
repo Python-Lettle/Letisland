@@ -189,6 +189,8 @@ public class FishingGUI implements Listener {
                     lore.add("§7重量范围: §f" + fish.getMinWeight() + " - " + fish.getMaxWeight() + " kg");
                     lore.add("§7基础价值: §e" + economyManager.format(fish.getBaseValue()) + "/kg");
                     meta.setLore(lore);
+                    // 应用自定义材质（与实际鱼物品保持一致）
+                    fishingManager.applyFishCustomModel(meta, fish);
                     item.setItemMeta(meta);
                 }
                 inv.setItem(slot, item);

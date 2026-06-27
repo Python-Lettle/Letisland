@@ -83,12 +83,17 @@ levels:
 # min-weight / max-weight: 重量范围（单位：公斤）
 # base-value: 基础出售价格（实际价格 = base-value * weight）
 # weight: 钓到此鱼的随机权重（玩家等级达到tier后才有概率钓到）
+# custom-model-data: 自定义模型数据，配合资源包替换为自定义材质
+#   - 留空或 0 表示不设置，使用 material 的原版材质
+#   - 配置后客户端无资源包时会回退显示原版材质，无副作用
+#   - 资源包通过 item/<material>.json 的 overrides 字段按 custom_model_data 切换贴图
 fish:
   # ===== 1级鱼（普通）=====
   sardine:
     name: "沙丁鱼"
     tier: 1
     material: COD
+    custom-model-data: 1001
     min-weight: 0.1
     max-weight: 0.5
     base-value: 5.0
@@ -97,6 +102,7 @@ fish:
     name: "鲭鱼"
     tier: 1
     material: COD
+    custom-model-data: 1002
     min-weight: 0.2
     max-weight: 0.8
     base-value: 6.0
@@ -105,6 +111,7 @@ fish:
     name: "鲤鱼"
     tier: 1
     material: SALMON
+    custom-model-data: 1003
     min-weight: 0.3
     max-weight: 1.5
     base-value: 8.0
@@ -115,6 +122,7 @@ fish:
     name: "鲈鱼"
     tier: 2
     material: COD
+    custom-model-data: 1004
     min-weight: 0.5
     max-weight: 2.0
     base-value: 12.0
@@ -123,6 +131,7 @@ fish:
     name: "鳟鱼"
     tier: 2
     material: SALMON
+    custom-model-data: 1005
     min-weight: 0.4
     max-weight: 1.8
     base-value: 14.0
@@ -131,6 +140,7 @@ fish:
     name: "鲶鱼"
     tier: 2
     material: COD
+    custom-model-data: 1006
     min-weight: 1.0
     max-weight: 3.5
     base-value: 16.0
@@ -141,6 +151,7 @@ fish:
     name: "金枪鱼"
     tier: 3
     material: SALMON
+    custom-model-data: 1007
     min-weight: 5.0
     max-weight: 20.0
     base-value: 3.0
@@ -149,6 +160,7 @@ fish:
     name: "帝王鲑"
     tier: 3
     material: SALMON
+    custom-model-data: 1008
     min-weight: 3.0
     max-weight: 12.0
     base-value: 5.0
@@ -157,6 +169,7 @@ fish:
     name: "剑鱼"
     tier: 3
     material: COD
+    custom-model-data: 1009
     min-weight: 8.0
     max-weight: 30.0
     base-value: 4.0
@@ -167,6 +180,7 @@ fish:
     name: "深海鲨"
     tier: 4
     material: COD
+    custom-model-data: 1010
     min-weight: 20.0
     max-weight: 80.0
     base-value: 2.0
@@ -175,6 +189,7 @@ fish:
     name: "巨型蝠鲼"
     tier: 4
     material: SALMON
+    custom-model-data: 1011
     min-weight: 30.0
     max-weight: 100.0
     base-value: 2.5
@@ -183,6 +198,7 @@ fish:
     name: "黄金鱼"
     tier: 4
     material: TROPICAL_FISH
+    custom-model-data: 1012
     min-weight: 0.5
     max-weight: 2.0
     base-value: 80.0
@@ -193,6 +209,7 @@ fish:
     name: "克拉肯触手"
     tier: 5
     material: INK_SAC
+    custom-model-data: 1013
     min-weight: 50.0
     max-weight: 200.0
     base-value: 1.5
@@ -201,6 +218,7 @@ fish:
     name: "海龙"
     tier: 5
     material: PUFFERFISH
+    custom-model-data: 1014
     min-weight: 30.0
     max-weight: 150.0
     base-value: 2.0
@@ -209,6 +227,7 @@ fish:
     name: "利维坦鳞片"
     tier: 5
     material: NAUTILUS_SHELL
+    custom-model-data: 1015
     min-weight: 100.0
     max-weight: 500.0
     base-value: 10.0
