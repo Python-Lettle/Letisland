@@ -1,5 +1,6 @@
 package cn.lettle.letisland.fishing;
 
+import cn.lettle.letisland.database.DatabaseManager;
 import cn.lettle.letisland.economy.EconomyManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -17,6 +18,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -27,6 +32,7 @@ public class FishingManager {
 
     private final JavaPlugin plugin;
     private final EconomyManager economyManager;
+    private final DatabaseManager databaseManager;
     private final File fishingFile;
     private FileConfiguration fishingConfig;
 
@@ -63,9 +69,11 @@ public class FishingManager {
     private boolean autoSellEnabled;
     private int autoSellDefaultTier;
 
-    public FishingManager(@NotNull JavaPlugin plugin, @NotNull EconomyManager economyManager) {
+    public FishingManager(@NotNull JavaPlugin plugin, @NotNull EconomyManager economyManager,
+                         @NotNull DatabaseManager databaseManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
+        this.databaseManager = databaseManager;
         this.fishingFile = new File(plugin.getDataFolder(), "fishing.yml");
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.fishWeightKey = new NamespacedKey(plugin, "fish_weight");
@@ -203,17 +211,52 @@ public class FishingManager {
     // ==================== 玩家数据 ====================
 
     public int getPlayerLevel(@NotNull UUID playerId) {
-        return fishingConfig.getInt("players." + playerId + ".level", 1);
+        String sql = "SELECT level FROM fishing_player WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("level");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询玩家钓鱼等级失败: " + e.getMessage());
+        }
+        return 1;
     }
 
     public int getPlayerExp(@NotNull UUID playerId) {
-        return fishingConfig.getInt("players." + playerId + ".exp", 0);
+        String sql = "SELECT exp FROM fishing_player WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("exp");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询玩家钓鱼经验失败: " + e.getMessage());
+        }
+        return 0;
     }
 
     public void setPlayerData(@NotNull UUID playerId, int level, int exp) {
-        fishingConfig.set("players." + playerId + ".level", level);
-        fishingConfig.set("players." + playerId + ".exp", exp);
-        saveConfig();
+        String sql = """
+                INSERT INTO fishing_player (player_uuid, level, exp)
+                VALUES (?, ?, ?)
+                ON CONFLICT(player_uuid) DO UPDATE SET level = excluded.level, exp = excluded.exp;
+                """;
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setInt(2, level);
+            ps.setInt(3, exp);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("保存玩家钓鱼数据失败: " + e.getMessage());
+        }
     }
 
     public void addExp(@NotNull UUID playerId, int amount) {
@@ -244,17 +287,41 @@ public class FishingManager {
 
     /**
      * 获取玩家自动出售等级（0=关闭）
+     * 未在数据库中存储记录时使用配置默认值
      */
     public int getAutoSellTier(@NotNull UUID playerId) {
-        return fishingConfig.getInt("players." + playerId + ".auto-sell-tier", autoSellDefaultTier);
+        String sql = "SELECT auto_sell_tier FROM fishing_player WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("auto_sell_tier");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询玩家自动出售等级失败: " + e.getMessage());
+        }
+        return autoSellDefaultTier;
     }
 
     /**
      * 设置玩家自动出售等级
      */
     public void setAutoSellTier(@NotNull UUID playerId, int tier) {
-        fishingConfig.set("players." + playerId + ".auto-sell-tier", tier);
-        saveConfig();
+        String sql = """
+                INSERT INTO fishing_player (player_uuid, level, exp, auto_sell_tier)
+                VALUES (?, 1, 0, ?)
+                ON CONFLICT(player_uuid) DO UPDATE SET auto_sell_tier = excluded.auto_sell_tier;
+                """;
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setInt(2, tier);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("保存玩家自动出售等级失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -270,46 +337,102 @@ public class FishingManager {
 
     /**
      * 记录玩家钓到鱼（图鉴数据）
+     * 使用UPSERT原子性地同时更新钓到次数和最高重量纪录
      */
     public void recordFishCatch(@NotNull UUID playerId, @NotNull String fishId, double weight) {
-        String base = "players." + playerId + ".codex." + fishId;
-        int count = fishingConfig.getInt(base + ".count", 0);
-        double maxWeight = fishingConfig.getDouble(base + ".max-weight", 0.0);
-
-        fishingConfig.set(base + ".count", count + 1);
-        if (weight > maxWeight) {
-            fishingConfig.set(base + ".max-weight", weight);
+        String sql = """
+                INSERT INTO fishing_codex (player_uuid, fish_id, catch_count, max_weight)
+                VALUES (?, ?, 1, ?)
+                ON CONFLICT(player_uuid, fish_id) DO UPDATE SET
+                    catch_count = fishing_codex.catch_count + 1,
+                    max_weight = MAX(fishing_codex.max_weight, excluded.max_weight);
+                """;
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setString(2, fishId);
+            ps.setDouble(3, weight);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("记录鱼类图鉴失败: " + e.getMessage());
         }
-        saveConfig();
     }
 
     /**
      * 获取玩家某鱼的钓到次数
      */
     public int getCodexCount(@NotNull UUID playerId, @NotNull String fishId) {
-        return fishingConfig.getInt("players." + playerId + ".codex." + fishId + ".count", 0);
+        String sql = "SELECT catch_count FROM fishing_codex WHERE player_uuid = ? AND fish_id = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setString(2, fishId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("catch_count");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询图鉴次数失败: " + e.getMessage());
+        }
+        return 0;
     }
 
     /**
      * 获取玩家某鱼的最高重量纪录
      */
     public double getCodexMaxWeight(@NotNull UUID playerId, @NotNull String fishId) {
-        return fishingConfig.getDouble("players." + playerId + ".codex." + fishId + ".max-weight", 0.0);
+        String sql = "SELECT max_weight FROM fishing_codex WHERE player_uuid = ? AND fish_id = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setString(2, fishId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("max_weight");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询图鉴最高重量失败: " + e.getMessage());
+        }
+        return 0.0;
     }
 
     /**
      * 检查玩家是否已发现某种鱼
      */
     public boolean hasDiscovered(@NotNull UUID playerId, @NotNull String fishId) {
-        return fishingConfig.contains("players." + playerId + ".codex." + fishId);
+        String sql = "SELECT 1 FROM fishing_codex WHERE player_uuid = ? AND fish_id = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setString(2, fishId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询鱼类是否已发现失败: " + e.getMessage());
+        }
+        return false;
     }
 
     /**
      * 获取玩家已发现的鱼类数量
      */
     public int getDiscoveredCount(@NotNull UUID playerId) {
-        ConfigurationSection codex = fishingConfig.getConfigurationSection("players." + playerId + ".codex");
-        return codex != null ? codex.getKeys(false).size() : 0;
+        String sql = "SELECT COUNT(*) AS cnt FROM fishing_codex WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("cnt");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询已发现鱼类数量失败: " + e.getMessage());
+        }
+        return 0;
     }
 
     /**

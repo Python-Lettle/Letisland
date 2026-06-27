@@ -1,5 +1,7 @@
 package cn.lettle.letisland;
 
+import cn.lettle.letisland.database.DatabaseManager;
+import cn.lettle.letisland.database.YamlMigrator;
 import cn.lettle.letisland.economy.EconomyCommand;
 import cn.lettle.letisland.economy.EconomyManager;
 import cn.lettle.letisland.fishing.FishingCommand;
@@ -19,6 +21,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Letisland extends JavaPlugin {
 
+    private DatabaseManager databaseManager;
     private EconomyManager economyManager;
     private ShopManager shopManager;
     private ShopListener shopListener;
@@ -35,9 +38,15 @@ public final class Letisland extends JavaPlugin {
         saveResource("fishing.yml", false);
         saveResource("titles.yml", false);
 
+        // 初始化数据库管理器（必须在所有数据管理器之前初始化）
+        databaseManager = new DatabaseManager(this);
+
+        // 一次性迁移旧版YAML玩家数据到SQLite（仅在首次启动时执行）
+        new YamlMigrator(this, databaseManager).migrateIfNeeded();
+
         // 初始化经济系统
         String currencySymbol = getConfig().getString("economy.currency-symbol", "$");
-        economyManager = new EconomyManager(this, currencySymbol);
+        economyManager = new EconomyManager(this, databaseManager, currencySymbol);
 
         // 初始化商店系统
         shopManager = new ShopManager(getDataFolder());
@@ -48,7 +57,7 @@ public final class Letisland extends JavaPlugin {
         GeneratorListener generatorListener = new GeneratorListener(generatorManager);
 
         // 初始化钓鱼系统
-        fishingManager = new FishingManager(this, economyManager);
+        fishingManager = new FishingManager(this, economyManager, databaseManager);
         FishingListener fishingListener = new FishingListener(fishingManager);
         FishingCommand fishingCommand = new FishingCommand(fishingManager, economyManager);
 
@@ -69,7 +78,7 @@ public final class Letisland extends JavaPlugin {
         getCommand("fishing").setTabCompleter(fishingCommand);
 
         // 初始化称号系统（依赖钓鱼系统获取玩家等级用于聊天格式化）
-        titleManager = new TitleManager(this);
+        titleManager = new TitleManager(this, databaseManager);
         ChatListener chatListener = new ChatListener(titleManager, fishingManager);
         TitleCommand titleCommand = new TitleCommand(titleManager);
         getCommand("title").setExecutor(titleCommand);
@@ -104,12 +113,19 @@ public final class Letisland extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // 保存经济数据
-        if (economyManager != null) {
-            economyManager.saveData();
-        }
         getLogger().warning("Letisland 正在关闭... 正在保存数据...");
+        // 关闭数据库连接（SQLite在每次操作时已实时持久化，无需额外保存）
+        if (databaseManager != null) {
+            databaseManager.close();
+        }
         getLogger().info("Letisland 已关闭");
+    }
+
+    /**
+     * 获取数据库管理器实例
+     */
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 
     /**

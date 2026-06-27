@@ -226,15 +226,14 @@ public class EconomyCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * 重载数据
+     * 重载数据（SQLite模式下数据实时持久化，重载无需实际操作）
      */
     private void handleReload(CommandSender sender) {
         if (!sender.hasPermission("letisland.economy.admin")) {
             sender.sendMessage("§c你没有权限执行此操作");
             return;
         }
-        economyManager.reload();
-        sender.sendMessage("§a经济数据已重新加载");
+        sender.sendMessage("§a经济数据已实时持久化至SQLite，无需手动重载");
     }
 
     /**

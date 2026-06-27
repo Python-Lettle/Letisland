@@ -1,5 +1,6 @@
 package cn.lettle.letisland.title;
 
+import cn.lettle.letisland.database.DatabaseManager;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -12,15 +13,21 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
  * 称号系统核心管理器
  * 管理称号定义、玩家解锁状态及当前佩戴称号
+ * 玩家运行时数据持久化在SQLite数据库中
  */
 public class TitleManager {
 
     private final JavaPlugin plugin;
+    private final DatabaseManager databaseManager;
     private final File titlesFile;
     private FileConfiguration titlesConfig;
 
@@ -30,8 +37,9 @@ public class TitleManager {
     /** 称号配置 */
     private final Map<String, TitleConfig> titleConfigs = new LinkedHashMap<>();
 
-    public TitleManager(@NotNull JavaPlugin plugin) {
+    public TitleManager(@NotNull JavaPlugin plugin, @NotNull DatabaseManager databaseManager) {
         this.plugin = plugin;
+        this.databaseManager = databaseManager;
         this.titlesFile = new File(plugin.getDataFolder(), "titles.yml");
         loadConfig();
     }
@@ -95,27 +103,68 @@ public class TitleManager {
     // ==================== 玩家数据 ====================
 
     public boolean isUnlocked(@NotNull UUID playerId, @NotNull String titleId) {
-        List<String> unlocked = titlesConfig.getStringList("players." + playerId + ".unlocked");
-        return unlocked.contains(titleId);
+        String sql = "SELECT 1 FROM player_unlocked_titles WHERE player_uuid = ? AND title_id = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setString(2, titleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询称号解锁状态失败: " + e.getMessage());
+            return false;
+        }
     }
 
     @NotNull
     public List<String> getUnlockedTitles(@NotNull UUID playerId) {
-        return titlesConfig.getStringList("players." + playerId + ".unlocked");
+        String sql = "SELECT title_id FROM player_unlocked_titles WHERE player_uuid = ?";
+        List<String> result = new ArrayList<>();
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(rs.getString("title_id"));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询已解锁称号列表失败: " + e.getMessage());
+        }
+        return result;
     }
 
     public void unlock(@NotNull UUID playerId, @NotNull String titleId) {
-        List<String> unlocked = new ArrayList<>(getUnlockedTitles(playerId));
-        if (!unlocked.contains(titleId)) {
-            unlocked.add(titleId);
-            titlesConfig.set("players." + playerId + ".unlocked", unlocked);
-            saveConfig();
+        if (isUnlocked(playerId, titleId)) {
+            return;
+        }
+        String sql = "INSERT OR IGNORE INTO player_unlocked_titles (player_uuid, title_id) VALUES (?, ?)";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setString(2, titleId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("解锁称号失败: " + e.getMessage());
         }
     }
 
     @Nullable
     public String getCurrentTitle(@NotNull UUID playerId) {
-        return titlesConfig.getString("players." + playerId + ".current");
+        String sql = "SELECT title_id FROM player_current_title WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("title_id");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询当前称号失败: " + e.getMessage());
+        }
+        return null;
     }
 
     public void setCurrentTitle(@NotNull UUID playerId, @Nullable String titleId) {
@@ -123,8 +172,23 @@ public class TitleManager {
         if (titleId != null && !isUnlocked(playerId, titleId)) {
             return;
         }
-        titlesConfig.set("players." + playerId + ".current", titleId);
-        saveConfig();
+        String sql = """
+                INSERT INTO player_current_title (player_uuid, title_id)
+                VALUES (?, ?)
+                ON CONFLICT(player_uuid) DO UPDATE SET title_id = excluded.title_id;
+                """;
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            if (titleId != null) {
+                ps.setString(2, titleId);
+            } else {
+                ps.setNull(2, java.sql.Types.VARCHAR);
+            }
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("设置当前称号失败: " + e.getMessage());
+        }
     }
 
     // ==================== 解锁逻辑 ====================
@@ -223,7 +287,19 @@ public class TitleManager {
     }
 
     public int getUnlockedCount(@NotNull UUID playerId) {
-        return getUnlockedTitles(playerId).size();
+        String sql = "SELECT COUNT(*) AS cnt FROM player_unlocked_titles WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("cnt");
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询已解锁称号数量失败: " + e.getMessage());
+        }
+        return 0;
     }
 
     // ==================== 数据类 ====================

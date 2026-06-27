@@ -1,22 +1,24 @@
 package cn.lettle.letisland.economy;
 
+import cn.lettle.letisland.database.DatabaseManager;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * 经济系统核心管理器
  * 负责玩家余额的存储、查询、增减和转账操作
+ * 数据持久化在SQLite数据库的 economy_balance 表中
  */
 public class EconomyManager {
 
@@ -24,48 +26,14 @@ public class EconomyManager {
     private static final double DEFAULT_BALANCE = 0.0;
 
     private final JavaPlugin plugin;
-    private final File dataFile;
-    private FileConfiguration dataConfig;
+    private final DatabaseManager databaseManager;
     private final String currencySymbol;
 
-    public EconomyManager(@NotNull JavaPlugin plugin, @NotNull String currencySymbol) {
+    public EconomyManager(@NotNull JavaPlugin plugin, @NotNull DatabaseManager databaseManager,
+                          @NotNull String currencySymbol) {
         this.plugin = plugin;
+        this.databaseManager = databaseManager;
         this.currencySymbol = currencySymbol;
-        this.dataFile = new File(plugin.getDataFolder(), "economy.yml");
-        loadData();
-    }
-
-    /**
-     * 加载经济数据文件
-     */
-    private void loadData() {
-        if (!dataFile.exists()) {
-            try {
-                dataFile.getParentFile().mkdirs();
-                dataFile.createNewFile();
-            } catch (IOException e) {
-                throw new RuntimeException("无法创建经济数据文件: " + e.getMessage(), e);
-            }
-        }
-        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
-    }
-
-    /**
-     * 保存经济数据到磁盘
-     */
-    public void saveData() {
-        try {
-            dataConfig.save(dataFile);
-        } catch (IOException e) {
-            throw new RuntimeException("无法保存经济数据文件: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 重新加载数据文件
-     */
-    public void reload() {
-        loadData();
     }
 
     /**
@@ -79,7 +47,19 @@ public class EconomyManager {
      * 获取玩家余额
      */
     public double getBalance(@NotNull UUID playerId) {
-        return round(dataConfig.getDouble("players." + playerId + ".balance", DEFAULT_BALANCE));
+        String sql = "SELECT balance FROM economy_balance WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return round(rs.getDouble("balance"));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询玩家余额失败: " + e.getMessage());
+        }
+        return DEFAULT_BALANCE;
     }
 
     /**
@@ -95,12 +75,30 @@ public class EconomyManager {
     public void setBalance(@NotNull UUID playerId, double amount) {
         double rounded = round(amount);
         double before = getBalance(playerId);
-        dataConfig.set("players." + playerId + ".balance", rounded);
-        saveData();
+        upsertBalance(playerId, rounded);
 
         OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
         callTransactionEvent(player, EconomyTransactionEvent.TransactionType.DEPOSIT,
                 rounded - before, before, rounded);
+    }
+
+    /**
+     * 插入或更新玩家余额（UPSERT语义）
+     */
+    private void upsertBalance(@NotNull UUID playerId, double balance) {
+        String sql = """
+                INSERT INTO economy_balance (player_uuid, balance)
+                VALUES (?, ?)
+                ON CONFLICT(player_uuid) DO UPDATE SET balance = excluded.balance;
+                """;
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setDouble(2, balance);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("保存玩家余额失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -114,7 +112,17 @@ public class EconomyManager {
      * 检查玩家是否拥有账户
      */
     public boolean hasAccount(@NotNull UUID playerId) {
-        return dataConfig.contains("players." + playerId);
+        String sql = "SELECT 1 FROM economy_balance WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("查询账户是否存在失败: " + e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -129,8 +137,7 @@ public class EconomyManager {
      */
     public void createAccount(@NotNull UUID playerId) {
         if (!hasAccount(playerId)) {
-            dataConfig.set("players." + playerId + ".balance", DEFAULT_BALANCE);
-            saveData();
+            upsertBalance(playerId, DEFAULT_BALANCE);
 
             OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
             callTransactionEvent(player, EconomyTransactionEvent.TransactionType.INITIALIZE,
@@ -154,8 +161,7 @@ public class EconomyManager {
         }
         double before = getBalance(playerId);
         double after = round(before + amount);
-        dataConfig.set("players." + playerId + ".balance", after);
-        saveData();
+        upsertBalance(playerId, after);
 
         OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
         callTransactionEvent(player, EconomyTransactionEvent.TransactionType.DEPOSIT,
@@ -182,8 +188,7 @@ public class EconomyManager {
             return false;
         }
         double after = round(before - amount);
-        dataConfig.set("players." + playerId + ".balance", after);
-        saveData();
+        upsertBalance(playerId, after);
 
         OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
         callTransactionEvent(player, EconomyTransactionEvent.TransactionType.WITHDRAW,
@@ -228,9 +233,23 @@ public class EconomyManager {
         double fromAfter = round(fromBefore - amount);
         double toAfter = round(toBefore + amount);
 
-        dataConfig.set("players." + fromId + ".balance", fromAfter);
-        dataConfig.set("players." + toId + ".balance", toAfter);
-        saveData();
+        // 事务保证原子性
+        try (Connection conn = databaseManager.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                upsertBalanceConn(conn, fromId, fromAfter);
+                upsertBalanceConn(conn, toId, toAfter);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("转账失败: " + e.getMessage());
+            return false;
+        }
 
         OfflinePlayer fromPlayer = Bukkit.getOfflinePlayer(fromId);
         OfflinePlayer toPlayer = Bukkit.getOfflinePlayer(toId);
@@ -240,6 +259,23 @@ public class EconomyManager {
         callTransactionEvent(toPlayer, EconomyTransactionEvent.TransactionType.TRANSFER_IN,
                 amount, toBefore, toAfter);
         return true;
+    }
+
+    /**
+     * 在指定连接上更新余额（用于事务）
+     */
+    private void upsertBalanceConn(@NotNull Connection conn, @NotNull UUID playerId, double balance)
+            throws SQLException {
+        String sql = """
+                INSERT INTO economy_balance (player_uuid, balance)
+                VALUES (?, ?)
+                ON CONFLICT(player_uuid) DO UPDATE SET balance = excluded.balance;
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.setDouble(2, balance);
+            ps.executeUpdate();
+        }
     }
 
     /**
