@@ -29,6 +29,11 @@ commands:
     usage: /fishing help
     aliases: [fish]
     permission: letisland.fishing.use
+  title:
+    description: 称号系统命令
+    usage: /title help
+    aliases: [titles]
+    permission: letisland.title.use
 
 permissions:
   # 经济系统权限
@@ -61,4 +66,11 @@ permissions:
     default: true
   letisland.fishing.admin:
     description: 允许管理钓鱼系统（设置等级、热重载、开关）
+    default: op
+  # 称号系统权限
+  letisland.title.use:
+    description: 允许使用称号系统（查看图鉴、佩戴称号）
+    default: true
+  letisland.title.admin:
+    description: 允许管理称号系统（热重载、开关）
     default: op

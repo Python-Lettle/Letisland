@@ -1,0 +1,34 @@
+# Letisland 称号系统配置文件
+
+# 称号系统开关
+enabled: true
+
+# 玩家数据存储（由插件自动维护）
+# players:
+#   <uuid>:
+#     unlocked: [fisherman, ...]   # 已解锁的称号ID列表
+#     current: fisherman            # 当前佩戴的称号ID（null表示无）
+players: {}
+
+# 称号定义
+# 每个称号的配置结构：
+#   name: 称号名称（显示在聊天框中）
+#   color: 称号颜色（Minecraft颜色代码，如 §a §b §6 等，决定聊天中称号的显示颜色）
+#   description: 称号介绍（显示在图鉴中）
+#   unlock-method: 解锁方式描述（向玩家展示如何解锁）
+#   unlock-items: 解锁所需物品列表（玩家点击图鉴按钮时检测并扣除）
+#     - material: 物品材质
+#       display-name: 显示名称（在图鉴中展示给玩家）
+#       amount: 数量
+#     留空或不存在则表示解锁方式未知，点击时提示"该称号解锁条件未知"
+titles:
+  # ===== 测试称号 =====
+  fisherman:
+    name: "渔民"
+    color: "§b"
+    description: "恭喜你成为了一位渔民"
+    unlock-method: "上交一条小丑鱼"
+    unlock-items:
+      - material: TROPICAL_FISH
+        display-name: "小丑鱼"
+        amount: 1

@@ -12,6 +12,9 @@ import cn.lettle.letisland.generator.GeneratorManager;
 import cn.lettle.letisland.shop.ShopCommand;
 import cn.lettle.letisland.shop.ShopListener;
 import cn.lettle.letisland.shop.ShopManager;
+import cn.lettle.letisland.title.ChatListener;
+import cn.lettle.letisland.title.TitleCommand;
+import cn.lettle.letisland.title.TitleManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Letisland extends JavaPlugin {
@@ -21,6 +24,7 @@ public final class Letisland extends JavaPlugin {
     private ShopListener shopListener;
     private GeneratorManager generatorManager;
     private FishingManager fishingManager;
+    private TitleManager titleManager;
 
     @Override
     public void onEnable() {
@@ -29,6 +33,7 @@ public final class Letisland extends JavaPlugin {
         saveResource("shop.yml", false);
         saveResource("generator.yml", false);
         saveResource("fishing.yml", false);
+        saveResource("titles.yml", false);
 
         // 初始化经济系统
         String currencySymbol = getConfig().getString("economy.currency-symbol", "$");
@@ -63,11 +68,20 @@ public final class Letisland extends JavaPlugin {
         getCommand("fishing").setExecutor(fishingCommand);
         getCommand("fishing").setTabCompleter(fishingCommand);
 
+        // 初始化称号系统（依赖钓鱼系统获取玩家等级用于聊天格式化）
+        titleManager = new TitleManager(this);
+        ChatListener chatListener = new ChatListener(titleManager, fishingManager);
+        TitleCommand titleCommand = new TitleCommand(titleManager);
+        getCommand("title").setExecutor(titleCommand);
+        getCommand("title").setTabCompleter(titleCommand);
+
         // 注册事件监听器
         getServer().getPluginManager().registerEvents(shopListener, this);
         getServer().getPluginManager().registerEvents(generatorListener, this);
         getServer().getPluginManager().registerEvents(fishingListener, this);
         getServer().getPluginManager().registerEvents(fishingCommand.getFishingGUI(), this);
+        getServer().getPluginManager().registerEvents(chatListener, this);
+        getServer().getPluginManager().registerEvents(titleCommand.getTitleGUI(), this);
 
         // 输出启动信息
         getLogger().info("==============================");
@@ -84,6 +98,8 @@ public final class Letisland extends JavaPlugin {
         getLogger().info("钓鱼系统已加载，状态: " + (fishingManager.isEnabled() ? "启用" : "关闭") +
                 "，鱼类: " + fishingManager.getFishConfigs().size() + " 种" +
                 "，BUFF: " + fishingManager.getBuffConfigs().size() + " 种");
+        getLogger().info("称号系统已加载，状态: " + (titleManager.isEnabled() ? "启用" : "关闭") +
+                "，称号: " + titleManager.getTitleConfigs().size() + " 种");
     }
 
     @Override
@@ -122,5 +138,12 @@ public final class Letisland extends JavaPlugin {
      */
     public FishingManager getFishingManager() {
         return fishingManager;
+    }
+
+    /**
+     * 获取称号管理器实例
+     */
+    public TitleManager getTitleManager() {
+        return titleManager;
     }
 }
