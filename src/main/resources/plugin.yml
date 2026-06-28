@@ -38,6 +38,10 @@ commands:
     description: 打开垃圾桶，取出被定时清理的世界掉落物
     usage: /trash
     permission: letisland.trash.use
+  security:
+    description: 安全防护系统命令（查看拦截状态、封禁/解封 IP）
+    usage: /security status
+    permission: letisland.security.admin
   letisland:
     description: 插件管理与日志查询命令
     usage: /letisland log help
@@ -86,6 +90,10 @@ permissions:
   letisland.trash.use:
     description: 允许打开垃圾桶取出被清理的掉落物
     default: true
+  # 安全防护系统权限
+  letisland.security.admin:
+    description: 允许管理安全防护系统（查看状态、封禁/解封 IP、热重载、开关）
+    default: op
   # 日志系统权限
   letisland.admin:
     description: 允许查询插件日志与管理插件

@@ -11,3 +11,28 @@ economy:
 # 商店系统开关存储在 shop.yml 的 settings.enabled 中
 # 刷石机系统开关存储在 generator.yml 的 enabled 中
 # 管理员可通过 /shop enable|disable 和 /generator enable|disable 随时切换
+
+# 安全防护系统配置
+# 用于拦截扫描机器人和可疑连接，并将拦截行为记录到日志（/letisland log type SECURITY_BLOCK）
+security:
+  # 是否启用安全防护
+  enabled: true
+  # 同一 IP 在 60 秒内最大连接尝试次数（超过将临时封禁该 IP）
+  max-attempts-per-minute: 5
+  # 触发自动封禁后的封禁时长（分钟）
+  block-duration-minutes: 60
+  # 是否启用用户名模式检测
+  username-check: true
+  # 已知扫描机器人用户名（精确匹配，不区分大小写，命中立即封禁 IP）
+  # 这些通常是批量扫描服务器并归档的服务（如 MCArchive），不会正常进入游戏
+  known-scanners:
+    - "MCArchive"
+    - "MCScanner"
+  # 可疑用户名正则表达式（命中即封禁 IP，请谨慎配置避免误伤正常玩家）
+  # 默认配置会拦截：
+  #   - 13 位及以上的纯小写字母+数字（常见随机哈希机器人名，如 ss652bedb563dd）
+  #   - 8 位及以上的纯数字名
+  suspicious-username-patterns:
+    - "^[a-z0-9]{13,}$"
+    - "^\\d{8,}$"
+

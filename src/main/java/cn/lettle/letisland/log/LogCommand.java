@@ -84,7 +84,7 @@ public class LogCommand implements CommandExecutor, TabCompleter {
     private void handleType(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage("§c用法: /letisland log type <类型> [数量]");
-            sender.sendMessage("§7可用类型: §eLOGIN §7/ §eLOGOUT §7/ §eCODEX_FISH §7/ §eCODEX_TITLE §7/ §eSENSITIVE");
+            sender.sendMessage("§7可用类型: §eLOGIN §7/ §eLOGOUT §7/ §eCODEX_FISH §7/ §eCODEX_TITLE §7/ §eSENSITIVE §7/ §eSECURITY_BLOCK");
             return;
         }
         try {
@@ -93,7 +93,7 @@ public class LogCommand implements CommandExecutor, TabCompleter {
             List<LogManager.LogEntry> logs = logManager.getLogsByType(type, count);
             sendLogs(sender, type.getDisplayName() + " 类型日志", logs);
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("§c无效类型，可用: LOGIN / LOGOUT / CODEX_FISH / CODEX_TITLE / SENSITIVE");
+            sender.sendMessage("§c无效类型，可用: LOGIN / LOGOUT / CODEX_FISH / CODEX_TITLE / SENSITIVE / SECURITY_BLOCK");
         }
     }
 
@@ -129,6 +129,7 @@ public class LogCommand implements CommandExecutor, TabCompleter {
             case CODEX_FISH -> "§b";
             case CODEX_TITLE -> "§d";
             case SENSITIVE -> "§6";
+            case SECURITY_BLOCK -> "§4";
         };
     }
 
@@ -147,7 +148,7 @@ public class LogCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/letisland log recent [数量] §7- 查看最近日志（默认10条，最多50条）");
         sender.sendMessage("§e/letisland log player <玩家名> [数量] §7- 查看某玩家的日志");
         sender.sendMessage("§e/letisland log type <类型> [数量] §7- 按类型查询日志");
-        sender.sendMessage("§7类型: §aLOGIN §7/ §cLOGOUT §7/ §bCODEX_FISH §7/ §dCODEX_TITLE §7/ §6SENSITIVE");
+        sender.sendMessage("§7类型: §aLOGIN §7/ §cLOGOUT §7/ §bCODEX_FISH §7/ §dCODEX_TITLE §7/ §6SENSITIVE §7/ §cSECURITY_BLOCK");
     }
 
     @Override

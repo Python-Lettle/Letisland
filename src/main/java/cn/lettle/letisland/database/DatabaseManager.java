@@ -210,6 +210,17 @@ public class DatabaseManager {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_logs_player ON plugin_logs(player_uuid);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_logs_type ON plugin_logs(log_type);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_logs_time ON plugin_logs(created_at);");
+
+            // 安全系统 - IP 封禁记录（持久化，重启后仍生效）
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS security_blocks (
+                        ip VARCHAR(45) PRIMARY KEY,
+                        reason VARCHAR(255) NOT NULL,
+                        blocked_until TIMESTAMP NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """);
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_security_until ON security_blocks(blocked_until);");
         }
     }
 

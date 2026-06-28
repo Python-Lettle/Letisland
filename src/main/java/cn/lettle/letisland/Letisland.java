@@ -14,6 +14,9 @@ import cn.lettle.letisland.generator.GeneratorManager;
 import cn.lettle.letisland.log.LogCommand;
 import cn.lettle.letisland.log.LogListener;
 import cn.lettle.letisland.log.LogManager;
+import cn.lettle.letisland.security.SecurityCommand;
+import cn.lettle.letisland.security.SecurityListener;
+import cn.lettle.letisland.security.SecurityManager;
 import cn.lettle.letisland.shop.ShopCommand;
 import cn.lettle.letisland.shop.ShopListener;
 import cn.lettle.letisland.shop.ShopManager;
@@ -35,6 +38,7 @@ public final class Letisland extends JavaPlugin {
     private FishingManager fishingManager;
     private TitleManager titleManager;
     private TrashBinManager trashBinManager;
+    private SecurityManager securityManager;
 
     @Override
     public void onEnable() {
@@ -53,6 +57,14 @@ public final class Letisland extends JavaPlugin {
 
         // 初始化日志系统（必须在FishingManager/TitleManager之前初始化）
         LogManager logManager = new LogManager(this, databaseManager);
+
+        // 初始化安全防护系统（拦截扫描机器人/可疑用户名/频率超限，记录 SECURITY_BLOCK 日志）
+        // 依赖 LogManager；在玩家登录最早期（AsyncPlayerPreLoginEvent）拦截，需先于其它业务模块就绪
+        securityManager = new SecurityManager(this, databaseManager, logManager);
+        SecurityListener securityListener = new SecurityListener(securityManager);
+        SecurityCommand securityCommand = new SecurityCommand(securityManager);
+        getCommand("security").setExecutor(securityCommand);
+        getCommand("security").setTabCompleter(securityCommand);
 
         // 初始化经济系统
         String currencySymbol = getConfig().getString("economy.currency-symbol", "$");
@@ -107,6 +119,7 @@ public final class Letisland extends JavaPlugin {
         LogListener logListener = new LogListener(logManager);
 
         // 注册事件监听器
+        getServer().getPluginManager().registerEvents(securityListener, this);
         getServer().getPluginManager().registerEvents(shopListener, this);
         getServer().getPluginManager().registerEvents(generatorListener, this);
         getServer().getPluginManager().registerEvents(fishingListener, this);
@@ -133,6 +146,8 @@ public final class Letisland extends JavaPlugin {
                 "，BUFF: " + fishingManager.getBuffConfigs().size() + " 种");
         getLogger().info("称号系统已加载，状态: " + (titleManager.isEnabled() ? "启用" : "关闭") +
                 "，称号: " + titleManager.getTitleConfigs().size() + " 种");
+        getLogger().info("安全防护系统已加载，状态: " + (securityManager.isEnabled() ? "启用" : "关闭") +
+                "，当前封禁 IP: " + securityManager.getActiveBlockCount() + " 个");
     }
 
     @Override
@@ -185,5 +200,12 @@ public final class Letisland extends JavaPlugin {
      */
     public TitleManager getTitleManager() {
         return titleManager;
+    }
+
+    /**
+     * 获取安全防护管理器实例
+     */
+    public SecurityManager getSecurityManager() {
+        return securityManager;
     }
 }

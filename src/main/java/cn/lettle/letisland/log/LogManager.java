@@ -73,6 +73,16 @@ public class LogManager {
     }
 
     /**
+     * 记录安全拦截事件（扫描机器人、可疑用户名、频率超限等被拦截的连接尝试）
+     * playerId 可能为 null（离线模式或未获取到 UUID），此时使用 NIL UUID 占位
+     */
+    public void logSecurityBlock(@Nullable UUID playerId, @NotNull String playerName,
+                                 @NotNull String ip, @NotNull String reason) {
+        UUID id = playerId != null ? playerId : new UUID(0, 0);
+        insertAsync(LogType.SECURITY_BLOCK, id, playerName, ip, reason);
+    }
+
+    /**
      * 异步插入日志记录
      */
     private void insertAsync(@NotNull LogType type, @NotNull UUID playerId,

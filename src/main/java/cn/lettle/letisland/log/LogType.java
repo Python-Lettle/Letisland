@@ -8,7 +8,8 @@ public enum LogType {
     LOGOUT("登出"),
     CODEX_FISH("鱼类图鉴解锁"),
     CODEX_TITLE("称号解锁"),
-    SENSITIVE("敏感操作");
+    SENSITIVE("敏感操作"),
+    SECURITY_BLOCK("安全拦截");
 
     private final String displayName;
 
