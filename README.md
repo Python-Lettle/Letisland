@@ -8,6 +8,7 @@ Minecraft 26.2 空岛服插件
 - [商店系统](#商店系统)
 - [刷石机系统](#刷石机系统)
 - [钓鱼科技系统](#钓鱼科技系统)
+- [安全防护系统](#安全防护系统)
 
 ## 经济系统
 
@@ -677,5 +678,227 @@ boolean isFish = fishingManager.isCustomFish(item);
 FishingManager.FishItemInfo info = fishingManager.getFishInfo(item);
 if (info != null) {
     double value = info.totalValue();
+}
+```
+
+---
+
+## 安全防护系统
+
+### 简介
+
+Letisland 安全防护系统用于拦截扫描机器人、批量探测脚本和可疑连接，避免服务器被恶意扫描和攻击消耗资源。系统在玩家登录流程的最早期（`AsyncPlayerPreLoginEvent`，`EventPriority.LOWEST` 最先执行）进行拦截，命中规则的连接会被立即拒绝并将详细记录写入日志。
+
+所有拦截行为通过 `LogManager` 记录到 SQLite 的 `plugin_logs` 表（`log_type = SECURITY_BLOCK`），可在游戏内通过 `/letisland log type SECURITY_BLOCK` 查询。封禁记录持久化到 `security_blocks` 表，服务器重启后仍然生效。
+
+### 防护机制
+
+系统提供三层防护，按顺序执行：
+
+1. **IP 黑名单**：命中过的 IP 在封禁期内直接拒绝连接；过期后自动解除
+2. **用户名检测**（在频率统计之前执行，避免扫描器继续累积计数）：
+   - 已知扫描器名单（精确匹配，不区分大小写）→ 立即封禁 IP
+   - 可疑用户名正则表达式 → 立即封禁 IP
+3. **频率限制**：同一 IP 在 60 秒内连接次数超过阈值 → 封禁 IP
+
+> 检测到拦截行为后，对应 IP 会被自动封禁一段时间（默认 60 分钟），期间该 IP 的所有连接尝试都会被立即拒绝。
+
+### 配置
+
+插件首次启动会在 `config.yml` 中生成 `security` 段：
+
+```yaml
+# 安全防护系统配置
+security:
+  # 是否启用安全防护
+  enabled: true
+  # 同一 IP 在 60 秒内最大连接尝试次数（超过将临时封禁该 IP）
+  max-attempts-per-minute: 5
+  # 触发自动封禁后的封禁时长（分钟）
+  block-duration-minutes: 60
+  # 是否启用用户名模式检测
+  username-check: true
+  # 已知扫描机器人用户名（精确匹配，不区分大小写，命中立即封禁 IP）
+  known-scanners:
+    - "MCArchive"
+    - "MCScanner"
+  # 可疑用户名正则表达式（命中即封禁 IP，请谨慎配置避免误伤正常玩家）
+  suspicious-username-patterns:
+    - "^[a-z0-9]{13,}$"   # 13位及以上的纯小写字母+数字（随机哈希名）
+    - "^\\d{8,}$"          # 8位及以上的纯数字名
+```
+
+#### 配置项说明
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `security.enabled` | 是否启用安全防护 | `true` |
+| `security.max-attempts-per-minute` | 同一 IP 60 秒内最大连接尝试次数 | `5` |
+| `security.block-duration-minutes` | 触发自动封禁后的封禁时长（分钟） | `60` |
+| `security.username-check` | 是否启用用户名模式检测 | `true` |
+| `security.known-scanners` | 已知扫描器用户名列表（精确匹配，不区分大小写） | `MCArchive`、`MCScanner` |
+| `security.suspicious-username-patterns` | 可疑用户名正则表达式列表（命中即封禁 IP） | 见上方示例 |
+
+> **配置升级提示**：由于 `config.yml` 已新增 `security` 段，服务器上**已存在的 config.yml 不会自动更新**。标量项有内置默认值（启用、5次/分钟、60分钟），但 `known-scanners` 和 `suspicious-username-patterns` 列表在旧配置中会为空，导致用户名检测不生效。建议删除旧 `config.yml` 让插件重新生成，或手动补充 `security` 段。
+
+### 命令
+
+主命令 `/security`，需要 `letisland.security.admin` 权限。
+
+| 命令 | 权限 | 说明 |
+|------|------|------|
+| `/security status` | `letisland.security.admin` | 查看防护状态与统计 |
+| `/security list` | `letisland.security.admin` | 列出当前被封禁的 IP（含原因和解封时间） |
+| `/security block <IP> [分钟] [原因]` | `letisland.security.admin` | 封禁 IP（不填分钟=永久封禁） |
+| `/security unblock <IP>` | `letisland.security.admin` | 解除 IP 封禁 |
+| `/security reload` | `letisland.security.admin` | 热重载配置 |
+| `/security enable` | `letisland.security.admin` | 启用防护系统 |
+| `/security disable` | `letisland.security.admin` | 关闭防护系统 |
+
+### 权限
+
+| 权限节点 | 说明 | 默认 |
+|----------|------|------|
+| `letisland.security.admin` | 管理安全防护系统（查看状态、封禁/解封 IP、热重载、开关） | 管理员 |
+
+### 使用说明
+
+#### 查看防护状态
+输入 `/security status`，显示系统开关状态、当前被封禁 IP 数量、正在追踪的 IP 数量。
+
+#### 查看封禁列表
+输入 `/security list`，列出所有被封禁的 IP，包括封禁原因和解封时间。永久封禁会显示为"永久封禁"。
+
+#### 手动封禁 IP
+```
+/security block 1.2.3.4                    # 永久封禁
+/security block 1.2.3.4 60                 # 封禁 60 分钟
+/security block 1.2.3.4 1440 频繁攻击       # 封禁 1440 分钟，原因"频繁攻击"
+```
+封禁后会在全服广播通知。
+
+#### 解除封禁
+```
+/security unblock 1.2.3.4
+```
+
+#### 热重载配置
+1. 编辑服务器 `plugins/Letisland/config.yml` 的 `security` 段
+2. 在游戏内执行 `/security reload`
+3. 配置立即生效（已封禁的 IP 不会被清除）
+
+### 日志查询
+
+所有拦截行为都会写入 `plugin_logs` 表（`log_type = SECURITY_BLOCK`），包含时间、IP、用户名、拦截原因。可通过日志系统命令查询：
+
+| 命令 | 说明 |
+|------|------|
+| `/letisland log type SECURITY_BLOCK` | 查看所有安全拦截记录（默认 10 条） |
+| `/letisland log type SECURITY_BLOCK 50` | 查看最近 50 条拦截记录 |
+| `/letisland log recent 20` | 查看最近所有类型日志（含 LOGIN/SECURITY_BLOCK 等） |
+
+拦截原因示例：
+- `黑名单拦截: 已知扫描机器人: MCArchive`
+- `黑名单拦截: 可疑用户名匹配 [^[a-z0-9]{13,}$]: ss652bedb563dd`
+- `黑名单拦截: 连接频率超限: 8 次/分钟（阈值 5）`
+
+同时，每次拦截都会在服务器控制台打印 `[安全拦截]` 警告日志，方便管理员实时查看。
+
+### 拦截流程
+
+```
+玩家发起连接
+     │
+     ▼
+AsyncPlayerPreLoginEvent (EventPriority.LOWEST, 最先执行)
+     │
+     ├─ 已在黑名单且未过期? ──是──▶ 拒绝连接 + 记录日志
+     │
+     ├─ 用户名命中已知扫描器名单? ──是──▶ 封禁IP + 拒绝 + 记录
+     │
+     ├─ 用户名匹配可疑正则? ──是──▶ 封禁IP + 拒绝 + 记录
+     │
+     ├─ 60秒内连接次数 > 阈值? ──是──▶ 封禁IP + 拒绝 + 记录
+     │
+     ▼
+放行（交由原版白名单/其它插件继续处理）
+```
+
+### 数据存储
+
+| 表名 | 说明 |
+|------|------|
+| `security_blocks` | IP 封禁记录（ip、reason、blocked_until、created_at） |
+| `plugin_logs` | 拦截日志（log_type = `SECURITY_BLOCK`） |
+
+- 启动时自动从 `security_blocks` 加载未过期的封禁记录到内存
+- 封禁/解封操作异步写入数据库，不阻塞主线程
+- 每 5 分钟清理过期的封禁记录与空的频率窗口，避免内存泄漏
+
+### 与原版白名单配合
+
+本插件在登录最早期拦截扫描行为并封禁 IP，但**不替代**原版白名单。建议同时启用原版白名单以获得最佳防护效果：
+
+```
+/whitelist on
+/whitelist add <玩家名>
+```
+
+- **原版白名单**：挡住普通陌生玩家
+- **安全防护系统**：挡住扫描机器人，并自动封禁其 IP（防止反复探测消耗服务器资源）
+
+### 开发者 API
+
+#### 获取安全管理器
+
+```java
+Letisland plugin = (Letisland) Bukkit.getPluginManager().getPlugin("Letisland");
+SecurityManager securityManager = plugin.getSecurityManager();
+```
+
+#### 常用方法
+
+```java
+// 检查某次登录（返回 null 表示放行，非 null 表示拦截）
+SecurityManager.CheckResult result = securityManager.checkLogin(ip, name, uuid);
+
+// 手动封禁 IP（minutes <= 0 表示永久）
+securityManager.manualBlock("1.2.3.4", "手动封禁原因", 60);
+
+// 解除封禁
+boolean removed = securityManager.unblockIP("1.2.3.4");
+
+// 查询状态
+boolean blocked = securityManager.isBlocked("1.2.3.4");
+int activeBlocks = securityManager.getActiveBlockCount();
+List<SecurityManager.BlockEntry> blocks = securityManager.getBlockedIPs();
+
+// 开关系统
+securityManager.setEnabled(false);
+```
+
+#### CheckResult 数据结构
+
+```java
+public record CheckResult(CheckResultType type, String message) {}
+
+public enum CheckResultType {
+    BLACKLISTED,      // 命中黑名单
+    SCANNER_NAME,     // 已知扫描器用户名
+    SUSPICIOUS_NAME,  // 可疑用户名正则
+    RATE_LIMITED      // 频率超限
+}
+```
+
+#### 拦截事件监听
+
+系统通过 `AsyncPlayerPreLoginEvent` 拦截，使用 `EventPriority.LOWEST` 确保最先执行。如需在拦截后执行额外逻辑（如通知 webhook），可监听同一事件并使用更高优先级检查 `getResult()`：
+
+```java
+@EventHandler(priority = EventPriority.MONITOR)
+public void onPreLogin(AsyncPlayerPreLoginEvent event) {
+    if (event.getLoginResult() == AsyncPlayerPreLoginEvent.Result.KICK_BANNED) {
+        // 可能被安全系统拦截，可在此对接外部告警
+    }
 }
 ```

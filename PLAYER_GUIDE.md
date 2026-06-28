@@ -28,7 +28,6 @@
 | 命令 | 说明 |
 |------|------|
 | `/economy balance` | 查询自己的余额 |
-| `/economy balance <玩家>` | 查询其他玩家余额（需要 `letisland.economy.balance.others` 权限，默认仅 OP） |
 | `/economy pay <玩家> <金额>` | 向指定玩家转账（金额必须大于 0，不能给自己转账） |
 
 **示例：**
