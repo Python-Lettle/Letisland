@@ -34,7 +34,7 @@ public class FishingListener implements Listener {
     private final Map<UUID, Long> fishingCooldown = new HashMap<>();
 
     /** 冷却时间（毫秒） */
-    private static final long FISH_COOLDOWN_MS = 500;
+    private static final long FISH_COOLDOWN_MS = 2000;
 
     public FishingListener(@NotNull FishingManager fishingManager) {
         this.fishingManager = fishingManager;

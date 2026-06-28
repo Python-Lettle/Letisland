@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 经济系统核心管理器
@@ -28,6 +29,9 @@ public class EconomyManager {
     private final JavaPlugin plugin;
     private final DatabaseManager databaseManager;
     private final String currencySymbol;
+
+    /** 玩家余额内存缓存（减少数据库查询） */
+    private final ConcurrentHashMap<UUID, Double> balanceCache = new ConcurrentHashMap<>();
 
     public EconomyManager(@NotNull JavaPlugin plugin, @NotNull DatabaseManager databaseManager,
                           @NotNull String currencySymbol) {
@@ -47,18 +51,26 @@ public class EconomyManager {
      * 获取玩家余额
      */
     public double getBalance(@NotNull UUID playerId) {
+        Double cached = balanceCache.get(playerId);
+        if (cached != null) {
+            return cached;
+        }
         String sql = "SELECT balance FROM economy_balance WHERE player_uuid = ?";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerId.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return round(rs.getDouble("balance"));
+                    double balance = round(rs.getDouble("balance"));
+                    balanceCache.put(playerId, balance);
+                    return balance;
                 }
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("查询玩家余额失败: " + e.getMessage());
         }
+        // 缓存默认值，避免重复查询不存在的记录
+        balanceCache.put(playerId, DEFAULT_BALANCE);
         return DEFAULT_BALANCE;
     }
 
@@ -98,7 +110,10 @@ public class EconomyManager {
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("保存玩家余额失败: " + e.getMessage());
+            return;
         }
+        // 更新内存缓存
+        balanceCache.put(playerId, balance);
     }
 
     /**
@@ -250,6 +265,9 @@ public class EconomyManager {
             plugin.getLogger().warning("转账失败: " + e.getMessage());
             return false;
         }
+        // 事务提交成功后更新内存缓存
+        balanceCache.put(fromId, fromAfter);
+        balanceCache.put(toId, toAfter);
 
         OfflinePlayer fromPlayer = Bukkit.getOfflinePlayer(fromId);
         OfflinePlayer toPlayer = Bukkit.getOfflinePlayer(toId);

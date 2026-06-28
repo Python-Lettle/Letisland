@@ -11,9 +11,6 @@ auto-sell:
   # 玩家可通过 /fishing autosell <等级> 自行设置
   default-tier: 0
 
-# 玩家钓鱼数据存储（由插件自动维护）
-players: {}
-
 # 钓鱼科技等级配置
 # exp-to-next: 升到下一级所需经验值
 # upgrade-cost: 升级需要消耗的材料

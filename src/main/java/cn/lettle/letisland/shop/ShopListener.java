@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -51,11 +52,29 @@ public class ShopListener implements Listener {
     public void openShop(@NotNull Player player) {
         // 检查是否需要自动刷新
         shopManager.checkAutoRefresh();
-        // 构建界面
-        Inventory inv = Bukkit.createInventory(new ShopHolder(), ShopManager.SHOP_SIZE, ShopManager.SHOP_TITLE);
+        // 构建界面（标题中带玩家余额）
+        Inventory inv = Bukkit.createInventory(new ShopHolder(), ShopManager.SHOP_SIZE, buildShopTitle(player));
         renderShop(inv);
         player.openInventory(inv);
         openShops.put(player.getUniqueId(), inv);
+    }
+
+    /**
+     * 构建包含玩家余额的商店标题
+     */
+    @NotNull
+    private String buildShopTitle(@NotNull Player player) {
+        return "§6§l空岛商店 §7| §e余额: " + economyManager.format(economyManager.getBalance(player));
+    }
+
+    /**
+     * 更新当前打开的商店界面标题（用于交易后刷新余额显示）
+     */
+    private void updateShopTitle(@NotNull Player player) {
+        InventoryView view = player.getOpenInventory();
+        if (view.getTopInventory().getHolder() instanceof ShopHolder) {
+            view.setTitle(buildShopTitle(player));
+        }
     }
 
     /**
@@ -223,6 +242,7 @@ public class ShopListener implements Listener {
             player.sendMessage("§a购买成功！§7消耗 §e" + economyManager.format(price) +
                     "§7，获得 §f" + shopItem.getAmount() + "x " + shopItem.getMaterial().name());
             player.getWorld().playSound(player.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+            updateShopTitle(player);
         } else {
             player.sendMessage("§c购买失败：扣款异常");
         }
@@ -264,6 +284,7 @@ public class ShopListener implements Listener {
                 "§7，获得 §e" + economyManager.format(price) +
                 "§7，当前余额 §e" + economyManager.format(economyManager.getBalance(player)));
         player.getWorld().playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
+        updateShopTitle(player);
     }
 
     /**

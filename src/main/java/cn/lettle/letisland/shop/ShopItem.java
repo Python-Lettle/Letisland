@@ -80,9 +80,9 @@ public class ShopItem {
                 lore.add("§a左键购买");
                 lore.add("§7价格: §e" + currencySymbol + String.format("%.2f", price));
             } else {
-                lore.add("§a左键出售手中物品");
+                lore.add("§a左键出售背包物品");
                 lore.add("§7出售价: §e" + currencySymbol + String.format("%.2f", price));
-                lore.add("§7需手持 §f" + amount + "x " + material.name());
+                lore.add("§7背包需有 §f" + amount + "x " + material.name());
             }
             meta.setLore(lore);
             item.setItemMeta(meta);

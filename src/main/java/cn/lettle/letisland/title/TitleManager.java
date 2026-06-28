@@ -1,6 +1,7 @@
 package cn.lettle.letisland.title;
 
 import cn.lettle.letisland.database.DatabaseManager;
+import cn.lettle.letisland.log.LogManager;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -18,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 称号系统核心管理器
@@ -28,6 +30,7 @@ public class TitleManager {
 
     private final JavaPlugin plugin;
     private final DatabaseManager databaseManager;
+    private final LogManager logManager;
     private final File titlesFile;
     private FileConfiguration titlesConfig;
 
@@ -37,9 +40,15 @@ public class TitleManager {
     /** 称号配置 */
     private final Map<String, TitleConfig> titleConfigs = new LinkedHashMap<>();
 
-    public TitleManager(@NotNull JavaPlugin plugin, @NotNull DatabaseManager databaseManager) {
+    /** 玩家当前称号内存缓存（聊天热路径优化）
+     *  使用 Optional 包装：key 存在表示已缓存，Optional.empty() 表示已缓存且无称号 */
+    private final Map<UUID, Optional<String>> currentTitleCache = new ConcurrentHashMap<>();
+
+    public TitleManager(@NotNull JavaPlugin plugin, @NotNull DatabaseManager databaseManager,
+                        @NotNull LogManager logManager) {
         this.plugin = plugin;
         this.databaseManager = databaseManager;
+        this.logManager = logManager;
         this.titlesFile = new File(plugin.getDataFolder(), "titles.yml");
         loadConfig();
     }
@@ -147,23 +156,37 @@ public class TitleManager {
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("解锁称号失败: " + e.getMessage());
+            return;
         }
+        // 记录称号解锁日志
+        TitleConfig title = titleConfigs.get(titleId);
+        String titleName = title != null ? title.getName() : titleId;
+        logManager.logCodexTitle(playerId, titleId, titleName);
     }
 
     @Nullable
     public String getCurrentTitle(@NotNull UUID playerId) {
+        // 缓存命中检查：key 存在表示已缓存，Optional.empty() 代表已缓存且无称号
+        Optional<String> cached = currentTitleCache.get(playerId);
+        if (cached != null) {
+            return cached.orElse(null);
+        }
         String sql = "SELECT title_id FROM player_current_title WHERE player_uuid = ?";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerId.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("title_id");
+                    String titleId = rs.getString("title_id");
+                    currentTitleCache.put(playerId, Optional.ofNullable(titleId));
+                    return titleId;
                 }
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("查询当前称号失败: " + e.getMessage());
         }
+        // 缓存空结果，避免重复查询
+        currentTitleCache.put(playerId, Optional.empty());
         return null;
     }
 
@@ -188,7 +211,10 @@ public class TitleManager {
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("设置当前称号失败: " + e.getMessage());
+            return;
         }
+        // 更新内存缓存
+        currentTitleCache.put(playerId, Optional.ofNullable(titleId));
     }
 
     // ==================== 解锁逻辑 ====================

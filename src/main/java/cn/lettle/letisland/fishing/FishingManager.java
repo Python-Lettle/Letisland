@@ -2,6 +2,7 @@ package cn.lettle.letisland.fishing;
 
 import cn.lettle.letisland.database.DatabaseManager;
 import cn.lettle.letisland.economy.EconomyManager;
+import cn.lettle.letisland.log.LogManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -23,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 钓鱼科技核心管理器
@@ -33,6 +35,7 @@ public class FishingManager {
     private final JavaPlugin plugin;
     private final EconomyManager economyManager;
     private final DatabaseManager databaseManager;
+    private final LogManager logManager;
     private final File fishingFile;
     private FileConfiguration fishingConfig;
 
@@ -69,11 +72,15 @@ public class FishingManager {
     private boolean autoSellEnabled;
     private int autoSellDefaultTier;
 
+    /** 玩家等级内存缓存（聊天热路径优化） */
+    private final Map<UUID, Integer> levelCache = new ConcurrentHashMap<>();
+
     public FishingManager(@NotNull JavaPlugin plugin, @NotNull EconomyManager economyManager,
-                         @NotNull DatabaseManager databaseManager) {
+                         @NotNull DatabaseManager databaseManager, @NotNull LogManager logManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
         this.databaseManager = databaseManager;
+        this.logManager = logManager;
         this.fishingFile = new File(plugin.getDataFolder(), "fishing.yml");
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.fishWeightKey = new NamespacedKey(plugin, "fish_weight");
@@ -211,18 +218,26 @@ public class FishingManager {
     // ==================== 玩家数据 ====================
 
     public int getPlayerLevel(@NotNull UUID playerId) {
+        Integer cached = levelCache.get(playerId);
+        if (cached != null) {
+            return cached;
+        }
         String sql = "SELECT level FROM fishing_player WHERE player_uuid = ?";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerId.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt("level");
+                    int level = rs.getInt("level");
+                    levelCache.put(playerId, level);
+                    return level;
                 }
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("查询玩家钓鱼等级失败: " + e.getMessage());
         }
+        // 缓存默认等级，避免新玩家每次聊天都查库
+        levelCache.put(playerId, 1);
         return 1;
     }
 
@@ -257,6 +272,8 @@ public class FishingManager {
         } catch (SQLException e) {
             plugin.getLogger().warning("保存玩家钓鱼数据失败: " + e.getMessage());
         }
+        // 更新内存缓存
+        levelCache.put(playerId, level);
     }
 
     public void addExp(@NotNull UUID playerId, int amount) {
@@ -338,8 +355,11 @@ public class FishingManager {
     /**
      * 记录玩家钓到鱼（图鉴数据）
      * 使用UPSERT原子性地同时更新钓到次数和最高重量纪录
+     * 首次发现时记录日志
      */
     public void recordFishCatch(@NotNull UUID playerId, @NotNull String fishId, double weight) {
+        boolean isNewDiscovery = !hasDiscovered(playerId, fishId);
+
         String sql = """
                 INSERT INTO fishing_codex (player_uuid, fish_id, catch_count, max_weight)
                 VALUES (?, ?, 1, ?)
@@ -355,6 +375,13 @@ public class FishingManager {
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("记录鱼类图鉴失败: " + e.getMessage());
+        }
+
+        // 首次发现记录日志
+        if (isNewDiscovery) {
+            FishConfig fish = fishConfigs.get(fishId);
+            String fishName = fish != null ? fish.getName() : fishId;
+            logManager.logCodexFish(playerId, fishId, fishName, weight);
         }
     }
 

@@ -3,13 +3,6 @@
 # 称号系统开关
 enabled: true
 
-# 玩家数据存储（由插件自动维护）
-# players:
-#   <uuid>:
-#     unlocked: [fisherman, ...]   # 已解锁的称号ID列表
-#     current: fisherman            # 当前佩戴的称号ID（null表示无）
-players: {}
-
 # 称号定义
 # 每个称号的配置结构：
 #   name: 称号名称（显示在聊天框中）

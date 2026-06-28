@@ -1,5 +1,6 @@
 package cn.lettle.letisland.shop;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -52,6 +53,9 @@ public class ShopManager {
     /** 上次刷新时间（毫秒时间戳） */
     private long lastRefreshTime;
 
+    /** 是否在刷新后广播通知（构造函数首次刷新时为 false，避免启动时刷屏） */
+    private boolean announceRefresh = false;
+
     private final File shopFile;
     private FileConfiguration shopConfig;
 
@@ -68,6 +72,8 @@ public class ShopManager {
         this.shopFile = new File(dataFolder, "shop.yml");
         loadConfig();
         refresh();
+        // 首次构造刷新完成后再开启广播，避免插件启动时给全服发通知
+        this.announceRefresh = true;
     }
 
     /**
@@ -199,6 +205,11 @@ public class ShopManager {
         for (ShopItem item : selectedSell) {
             currentStock.put(slot, item);
             slot++;
+        }
+
+        // 刷新后通知所有在线玩家（构造函数首次刷新时跳过）
+        if (announceRefresh) {
+            Bukkit.broadcastMessage("§6[商店] §a商店已刷新！快去看看有什么新商品吧～");
         }
     }
 

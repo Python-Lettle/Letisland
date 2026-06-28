@@ -11,12 +11,18 @@ import cn.lettle.letisland.fishing.FishingManager;
 import cn.lettle.letisland.generator.GeneratorCommand;
 import cn.lettle.letisland.generator.GeneratorListener;
 import cn.lettle.letisland.generator.GeneratorManager;
+import cn.lettle.letisland.log.LogCommand;
+import cn.lettle.letisland.log.LogListener;
+import cn.lettle.letisland.log.LogManager;
 import cn.lettle.letisland.shop.ShopCommand;
 import cn.lettle.letisland.shop.ShopListener;
 import cn.lettle.letisland.shop.ShopManager;
 import cn.lettle.letisland.title.ChatListener;
 import cn.lettle.letisland.title.TitleCommand;
 import cn.lettle.letisland.title.TitleManager;
+import cn.lettle.letisland.trash.TrashBinCommand;
+import cn.lettle.letisland.trash.TrashBinListener;
+import cn.lettle.letisland.trash.TrashBinManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Letisland extends JavaPlugin {
@@ -28,6 +34,7 @@ public final class Letisland extends JavaPlugin {
     private GeneratorManager generatorManager;
     private FishingManager fishingManager;
     private TitleManager titleManager;
+    private TrashBinManager trashBinManager;
 
     @Override
     public void onEnable() {
@@ -44,6 +51,9 @@ public final class Letisland extends JavaPlugin {
         // 一次性迁移旧版YAML玩家数据到SQLite（仅在首次启动时执行）
         new YamlMigrator(this, databaseManager).migrateIfNeeded();
 
+        // 初始化日志系统（必须在FishingManager/TitleManager之前初始化）
+        LogManager logManager = new LogManager(this, databaseManager);
+
         // 初始化经济系统
         String currencySymbol = getConfig().getString("economy.currency-symbol", "$");
         economyManager = new EconomyManager(this, databaseManager, currencySymbol);
@@ -57,7 +67,7 @@ public final class Letisland extends JavaPlugin {
         GeneratorListener generatorListener = new GeneratorListener(generatorManager);
 
         // 初始化钓鱼系统
-        fishingManager = new FishingManager(this, economyManager, databaseManager);
+        fishingManager = new FishingManager(this, economyManager, databaseManager, logManager);
         FishingListener fishingListener = new FishingListener(fishingManager);
         FishingCommand fishingCommand = new FishingCommand(fishingManager, economyManager);
 
@@ -78,11 +88,23 @@ public final class Letisland extends JavaPlugin {
         getCommand("fishing").setTabCompleter(fishingCommand);
 
         // 初始化称号系统（依赖钓鱼系统获取玩家等级用于聊天格式化）
-        titleManager = new TitleManager(this, databaseManager);
+        titleManager = new TitleManager(this, databaseManager, logManager);
         ChatListener chatListener = new ChatListener(titleManager, fishingManager);
         TitleCommand titleCommand = new TitleCommand(titleManager);
         getCommand("title").setExecutor(titleCommand);
         getCommand("title").setTabCompleter(titleCommand);
+
+        // 初始化垃圾桶系统（定时清理世界掉落物，玩家可从GUI取出）
+        trashBinManager = new TrashBinManager();
+        TrashBinListener trashBinListener = new TrashBinListener(this, trashBinManager);
+        TrashBinCommand trashBinCommand = new TrashBinCommand(trashBinListener);
+        getCommand("trash").setExecutor(trashBinCommand);
+
+        // 注册日志系统命令与监听器
+        LogCommand logCommand = new LogCommand(logManager);
+        getCommand("letisland").setExecutor(logCommand);
+        getCommand("letisland").setTabCompleter(logCommand);
+        LogListener logListener = new LogListener(logManager);
 
         // 注册事件监听器
         getServer().getPluginManager().registerEvents(shopListener, this);
@@ -91,6 +113,8 @@ public final class Letisland extends JavaPlugin {
         getServer().getPluginManager().registerEvents(fishingCommand.getFishingGUI(), this);
         getServer().getPluginManager().registerEvents(chatListener, this);
         getServer().getPluginManager().registerEvents(titleCommand.getTitleGUI(), this);
+        getServer().getPluginManager().registerEvents(logListener, this);
+        getServer().getPluginManager().registerEvents(trashBinListener, this);
 
         // 输出启动信息
         getLogger().info("==============================");
