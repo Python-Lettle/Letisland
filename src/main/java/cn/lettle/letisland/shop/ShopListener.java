@@ -268,7 +268,7 @@ public class ShopListener implements Listener {
         Material sellMaterial = shopItem.getMaterial();
 
         // 统计背包中该物品的总数
-        int available = countItem(player, sellMaterial);
+        int available = cn.lettle.letisland.util.InventoryUtils.countItem(player, sellMaterial);
         if (available < sellAmount) {
             player.sendMessage("§c背包中 §f" + sellMaterial.name() + " §c数量不足！需要 §f" +
                     sellAmount + "x§c，当前持有 §f" + available + "x");
@@ -276,7 +276,7 @@ public class ShopListener implements Listener {
         }
 
         // 从背包中扣除物品
-        removeItem(player, sellMaterial, sellAmount);
+        cn.lettle.letisland.util.InventoryUtils.removeItem(player, sellMaterial, sellAmount);
 
         // 增加余额
         economyManager.deposit(player, price);
@@ -288,59 +288,28 @@ public class ShopListener implements Listener {
     }
 
     /**
-     * 统计玩家背包中指定材质物品的总数
-     */
-    private int countItem(@NotNull Player player, @NotNull Material material) {
-        int count = 0;
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == material) {
-                count += item.getAmount();
-            }
-        }
-        return count;
-    }
-
-    /**
-     * 从玩家背包中扣除指定数量的物品（会跨槽位扣除）
-     */
-    private void removeItem(@NotNull Player player, @NotNull Material material, int amount) {
-        ItemStack[] contents = player.getInventory().getContents();
-        int remaining = amount;
-
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack item = contents[i];
-            if (item == null || item.getType() != material) {
-                continue;
-            }
-            if (item.getAmount() <= remaining) {
-                // 整组扣除
-                remaining -= item.getAmount();
-                contents[i] = null;
-            } else {
-                // 部分扣除
-                item.setAmount(item.getAmount() - remaining);
-                remaining = 0;
-            }
-        }
-        player.getInventory().setContents(contents);
-        player.updateInventory();
-    }
-
-    /**
      * 检查背包是否有空间放入物品
      */
     private boolean hasInventorySpace(@NotNull Player player, @NotNull ItemStack item) {
-        // 模拟添加，检查是否剩余
-        ItemStack clone = item.clone();
-        java.util.Map<Integer, ItemStack> leftover = player.getInventory().addItem(clone);
-        if (!leftover.isEmpty()) {
-            // 还原
-            player.getInventory().removeItem(item);
-            return false;
+        int amount = item.getAmount();
+        org.bukkit.inventory.Inventory inv = player.getInventory();
+        // 先尝试塞入已有堆叠
+        for (ItemStack existing : inv.getStorageContents()) {
+            if (existing == null || existing.getType() == Material.AIR) continue;
+            if (existing.isSimilar(item) && existing.getAmount() < existing.getMaxStackSize()) {
+                int canFit = existing.getMaxStackSize() - existing.getAmount();
+                amount -= canFit;
+                if (amount <= 0) return true;
+            }
         }
-        // 还原
-        player.getInventory().removeItem(item);
-        return true;
+        // 再用空槽位
+        for (ItemStack existing : inv.getStorageContents()) {
+            if (existing == null || existing.getType() == Material.AIR) {
+                amount -= item.getMaxStackSize();
+                if (amount <= 0) return true;
+            }
+        }
+        return false;
     }
 
     /**

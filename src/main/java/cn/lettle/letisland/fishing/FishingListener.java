@@ -16,10 +16,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 钓鱼事件监听器
@@ -28,16 +28,20 @@ import java.util.UUID;
 public class FishingListener implements Listener {
 
     private final FishingManager fishingManager;
-    private final Random random = new Random();
 
     /** 钓鱼奖励冷却（防止双击收竿重复触发），记录上次奖励时间戳 */
-    private final Map<UUID, Long> fishingCooldown = new HashMap<>();
+    private final Map<UUID, Long> fishingCooldown = new ConcurrentHashMap<>();
 
     /** 冷却时间（毫秒） */
     private static final long FISH_COOLDOWN_MS = 2000;
 
     public FishingListener(@NotNull FishingManager fishingManager) {
         this.fishingManager = fishingManager;
+    }
+
+    /** 玩家退出时清理冷却记录 */
+    public void evictCooldown(@NotNull UUID uuid) {
+        fishingCooldown.remove(uuid);
     }
 
     /**
@@ -70,7 +74,7 @@ public class FishingListener implements Listener {
         fishingManager.addExp(playerId, 1);
 
         // 决定奖励类型
-        double roll = random.nextDouble();
+        double roll = ThreadLocalRandom.current().nextDouble();
         double fishChance = fishingManager.getCustomFishChance();
         double expChance = fishingManager.getExpItemChance();
 
@@ -107,7 +111,7 @@ public class FishingListener implements Listener {
         }
 
         // 触发BUFF
-        if (random.nextDouble() < fishingManager.getBuffChance()) {
+        if (ThreadLocalRandom.current().nextDouble() < fishingManager.getBuffChance()) {
             FishingManager.BuffConfig buff = fishingManager.rollBuff();
             if (buff != null) {
                 applyBuff(player, buff);

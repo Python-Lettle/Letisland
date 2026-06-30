@@ -28,6 +28,7 @@ Thumbs.db
 desktop.ini
 
 .idea
+.trae
 .gradle
 build/
 out/

@@ -15,7 +15,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * 钓鱼GUI处理器
@@ -167,12 +173,15 @@ public class FishingGUI implements Listener {
         Inventory inv = Bukkit.createInventory(null, size, CODEX_GUI_TITLE);
 
         UUID playerId = player.getUniqueId();
+        // 批量查询玩家图鉴数据（一次查询替代 N 条鱼的逐条查询）
+        Map<String, FishingManager.CodexEntry> codex = fishingManager.getCodexBatch(playerId);
+        int discovered = codex.size();
         int slot = 0;
 
         for (FishingManager.FishConfig fish : fishingManager.getFishConfigs().values()) {
-            boolean discovered = fishingManager.hasDiscovered(playerId, fish.getId());
+            FishingManager.CodexEntry entry = codex.get(fish.getId());
 
-            if (discovered) {
+            if (entry != null) {
                 // 已发现：显示鱼的真实信息
                 ItemStack item = new ItemStack(fish.getMaterial());
                 ItemMeta meta = item.getItemMeta();
@@ -182,10 +191,8 @@ public class FishingGUI implements Listener {
 
                     List<String> lore = new ArrayList<>();
                     lore.add("§7品质: " + tierColor + FishingManager.getTierName(fish.getTier()));
-                    int count = fishingManager.getCodexCount(playerId, fish.getId());
-                    double maxWeight = fishingManager.getCodexMaxWeight(playerId, fish.getId());
-                    lore.add("§7钓到次数: §e" + count);
-                    lore.add("§7最高纪录: §e" + maxWeight + " kg");
+                    lore.add("§7钓到次数: §e" + entry.catchCount());
+                    lore.add("§7最高纪录: §e" + entry.maxWeight() + " kg");
                     lore.add("§7重量范围: §f" + fish.getMinWeight() + " - " + fish.getMaxWeight() + " kg");
                     lore.add("§7基础价值: §e" + economyManager.format(fish.getBaseValue()) + "/kg");
                     meta.setLore(lore);
@@ -222,7 +229,6 @@ public class FishingGUI implements Listener {
         }
         inv.setItem(backSlot, back);
 
-        int discovered = fishingManager.getDiscoveredCount(playerId);
         int total = fishingManager.getFishConfigs().size();
         player.sendMessage("§6[图鉴] §7已发现 §e" + discovered + "§7/§e" + total + " §7种鱼类");
 

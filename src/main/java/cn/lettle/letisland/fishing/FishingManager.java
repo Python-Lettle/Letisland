@@ -23,8 +23,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 钓鱼科技核心管理器
@@ -75,6 +81,15 @@ public class FishingManager {
     /** 玩家等级内存缓存（聊天热路径优化） */
     private final Map<UUID, Integer> levelCache = new ConcurrentHashMap<>();
 
+    /** 玩家经验内存缓存（write-through，避免每次 addExp 查 DB） */
+    private final Map<UUID, Integer> expCache = new ConcurrentHashMap<>();
+
+    /** 玩家自动出售等级内存缓存（write-through） */
+    private final Map<UUID, Integer> autoSellTierCache = new ConcurrentHashMap<>();
+
+    /** BUFF 总权重（配置加载后预计算） */
+    private double totalBuffWeight = 0;
+
     public FishingManager(@NotNull JavaPlugin plugin, @NotNull EconomyManager economyManager,
                          @NotNull DatabaseManager databaseManager, @NotNull LogManager logManager) {
         this.plugin = plugin;
@@ -86,6 +101,13 @@ public class FishingManager {
         this.fishWeightKey = new NamespacedKey(plugin, "fish_weight");
         this.expItemKey = new NamespacedKey(plugin, "exp_item");
         loadConfig();
+    }
+
+    /** 玩家退出时清理等级缓存 */
+    public void evictCache(@NotNull UUID uuid) {
+        levelCache.remove(uuid);
+        expCache.remove(uuid);
+        autoSellTierCache.remove(uuid);
     }
 
     // ==================== 配置加载 ====================
@@ -121,7 +143,13 @@ public class FishingManager {
         ConfigurationSection levelsSection = fishingConfig.getConfigurationSection("levels");
         if (levelsSection != null) {
             for (String key : levelsSection.getKeys(false)) {
-                int level = Integer.parseInt(key);
+                int level;
+                try {
+                    level = Integer.parseInt(key);
+                } catch (NumberFormatException e) {
+                    plugin.getLogger().warning("fishing.yml levels 中非数字等级键: " + key + "，已跳过");
+                    continue;
+                }
                 ConfigurationSection ls = levelsSection.getConfigurationSection(key);
                 if (ls == null) continue;
 
@@ -131,7 +159,7 @@ public class FishingManager {
                 List<UpgradeCost> costs = new ArrayList<>();
                 for (Map<?, ?> map : ls.getMapList("upgrade-cost")) {
                     String materialStr = (String) map.get("material");
-                    int amount = (int) map.get("amount");
+                    int amount = map.get("amount") instanceof Number ? ((Number) map.get("amount")).intValue() : 1;
                     Material material = Material.matchMaterial(materialStr);
                     if (material != null) {
                         String displayName = (String) map.get("display-name");
@@ -213,6 +241,9 @@ public class FishingManager {
         // 解析自动出售配置
         autoSellEnabled = fishingConfig.getBoolean("auto-sell.enabled", true);
         autoSellDefaultTier = fishingConfig.getInt("auto-sell.default-tier", 0);
+
+        // 预计算 BUFF 总权重（配置加载后不变，避免每次 rollBuff 重新求和）
+        totalBuffWeight = buffConfigs.values().stream().mapToDouble(BuffConfig::getWeight).sum();
     }
 
     // ==================== 玩家数据 ====================
@@ -242,13 +273,19 @@ public class FishingManager {
     }
 
     public int getPlayerExp(@NotNull UUID playerId) {
+        Integer cached = expCache.get(playerId);
+        if (cached != null) {
+            return cached;
+        }
         String sql = "SELECT exp FROM fishing_player WHERE player_uuid = ?";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerId.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt("exp");
+                    int exp = rs.getInt("exp");
+                    expCache.put(playerId, exp);
+                    return exp;
                 }
             }
         } catch (SQLException e) {
@@ -274,6 +311,7 @@ public class FishingManager {
         }
         // 更新内存缓存
         levelCache.put(playerId, level);
+        expCache.put(playerId, exp);
     }
 
     public void addExp(@NotNull UUID playerId, int amount) {
@@ -307,13 +345,19 @@ public class FishingManager {
      * 未在数据库中存储记录时使用配置默认值
      */
     public int getAutoSellTier(@NotNull UUID playerId) {
+        Integer cached = autoSellTierCache.get(playerId);
+        if (cached != null) {
+            return cached;
+        }
         String sql = "SELECT auto_sell_tier FROM fishing_player WHERE player_uuid = ?";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerId.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt("auto_sell_tier");
+                    int tier = rs.getInt("auto_sell_tier");
+                    autoSellTierCache.put(playerId, tier);
+                    return tier;
                 }
             }
         } catch (SQLException e) {
@@ -339,6 +383,7 @@ public class FishingManager {
         } catch (SQLException e) {
             plugin.getLogger().warning("保存玩家自动出售等级失败: " + e.getMessage());
         }
+        autoSellTierCache.put(playerId, tier);
     }
 
     /**
@@ -463,6 +508,32 @@ public class FishingManager {
     }
 
     /**
+     * 批量查询玩家图鉴数据（一次查询替代 N 条鱼的逐条查询）
+     * @return fish_id → CodexEntry 映射
+     */
+    @NotNull
+    public Map<String, CodexEntry> getCodexBatch(@NotNull UUID playerId) {
+        Map<String, CodexEntry> result = new HashMap<>();
+        String sql = "SELECT fish_id, catch_count, max_weight FROM fishing_codex WHERE player_uuid = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.put(rs.getString("fish_id"),
+                            new CodexEntry(rs.getInt("catch_count"), rs.getDouble("max_weight")));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("批量查询图鉴数据失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /** 图鉴条目（钓到次数 + 最高重量） */
+    public record CodexEntry(int catchCount, double maxWeight) {}
+
+    /**
      * 检查玩家经验是否已满
      */
     public boolean isExpMaxed(@NotNull UUID playerId) {
@@ -501,7 +572,7 @@ public class FishingManager {
         // 检查材料
         List<UpgradeCost> costs = nextConfig.getUpgradeCost();
         for (UpgradeCost cost : costs) {
-            if (!hasEnoughItem(player, cost.getMaterial(), cost.getAmount())) {
+            if (!cn.lettle.letisland.util.InventoryUtils.hasEnoughItem(player, cost.getMaterial(), cost.getAmount())) {
                 return new UpgradeResult(false, "§c材料不足！需要 §e" +
                         cost.getAmount() + " §c个 §e" + cost.getMaterial().name());
             }
@@ -509,7 +580,7 @@ public class FishingManager {
 
         // 扣除材料
         for (UpgradeCost cost : costs) {
-            removeItem(player, cost.getMaterial(), cost.getAmount());
+            cn.lettle.letisland.util.InventoryUtils.removeItem(player, cost.getMaterial(), cost.getAmount());
         }
 
         // 升级
@@ -527,18 +598,19 @@ public class FishingManager {
      */
     @Nullable
     public FishConfig rollFish(int playerLevel) {
-        // 筛选玩家可钓到的鱼（tier <= playerLevel）
+        // 筛选玩家可钓到的鱼（tier <= playerLevel）并同步累计权重
         List<FishConfig> available = new ArrayList<>();
+        double totalWeight = 0;
         for (FishConfig fish : fishConfigs.values()) {
             if (fish.getTier() <= playerLevel) {
                 available.add(fish);
+                totalWeight += fish.getWeight();
             }
         }
         if (available.isEmpty()) return null;
 
         // 按权重随机选择
-        double totalWeight = available.stream().mapToDouble(FishConfig::getWeight).sum();
-        double r = new Random().nextDouble() * totalWeight;
+        double r = ThreadLocalRandom.current().nextDouble(totalWeight);
         double cumulative = 0;
         for (FishConfig fish : available) {
             cumulative += fish.getWeight();
@@ -556,7 +628,7 @@ public class FishingManager {
         double min = fish.getMinWeight();
         double max = fish.getMaxWeight();
         // 使用平方分布使重量偏向较小值
-        double r = new Random().nextDouble();
+        double r = ThreadLocalRandom.current().nextDouble();
         r = r * r; // 平方使分布偏向0
         double weight = min + (max - min) * r;
         // 保留两位小数
@@ -655,7 +727,7 @@ public class FishingManager {
      */
     @NotNull
     public ItemStack createExpItem() {
-        int exp = expItemMinExp + new Random().nextInt(expItemMaxExp - expItemMinExp + 1);
+        int exp = ThreadLocalRandom.current().nextInt(expItemMinExp, expItemMaxExp + 1);
         ItemStack item = new ItemStack(expItemMaterial);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
@@ -704,8 +776,7 @@ public class FishingManager {
     public BuffConfig rollBuff() {
         if (buffConfigs.isEmpty()) return null;
 
-        double totalWeight = buffConfigs.values().stream().mapToDouble(BuffConfig::getWeight).sum();
-        double r = new Random().nextDouble() * totalWeight;
+        double r = ThreadLocalRandom.current().nextDouble(totalBuffWeight);
         double cumulative = 0;
         for (BuffConfig buff : buffConfigs.values()) {
             cumulative += buff.getWeight();
@@ -717,32 +788,6 @@ public class FishingManager {
     }
 
     // ==================== 工具方法 ====================
-
-    private boolean hasEnoughItem(Player player, Material material, int amount) {
-        int count = 0;
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == material) {
-                count += item.getAmount();
-            }
-        }
-        return count >= amount;
-    }
-
-    private void removeItem(Player player, Material material, int amount) {
-        int remaining = amount;
-        for (int i = 0; i < player.getInventory().getSize(); i++) {
-            ItemStack item = player.getInventory().getItem(i);
-            if (item == null || item.getType() != material) continue;
-            if (item.getAmount() <= remaining) {
-                remaining -= item.getAmount();
-                player.getInventory().setItem(i, null);
-            } else {
-                item.setAmount(item.getAmount() - remaining);
-                remaining = 0;
-            }
-            if (remaining <= 0) break;
-        }
-    }
 
     public static String getTierColor(int tier) {
         return switch (tier) {

@@ -12,7 +12,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 商店管理器
@@ -234,20 +238,10 @@ public class ShopManager {
         List<ShopItem> result = new ArrayList<>();
         List<ShopItem> remaining = new ArrayList<>(pool);
 
-        Random random = new Random();
         while (result.size() < count && !remaining.isEmpty()) {
             double totalWeight = remaining.stream().mapToDouble(ShopItem::getWeight).sum();
-            double r = random.nextDouble() * totalWeight;
-
-            double cumulative = 0;
-            ShopItem selected = null;
-            for (ShopItem item : remaining) {
-                cumulative += item.getWeight();
-                if (r <= cumulative) {
-                    selected = item;
-                    break;
-                }
-            }
+            ShopItem selected = cn.lettle.letisland.util.WeightedRandom.pick(
+                    remaining, ShopItem::getWeight, totalWeight);
 
             if (selected != null) {
                 result.add(selected);

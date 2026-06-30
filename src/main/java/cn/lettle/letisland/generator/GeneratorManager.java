@@ -11,7 +11,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 刷石机管理器
@@ -222,13 +226,13 @@ public class GeneratorManager {
         }
 
         // 先判断是否触发替换
-        if (new Random().nextDouble() >= config.getReplaceChance()) {
+        if (ThreadLocalRandom.current().nextDouble() >= config.getReplaceChance()) {
             return null;
         }
 
-        // 按权重随机选择矿物
-        double totalWeight = minerals.stream().mapToDouble(MineralEntry::getWeight).sum();
-        double r = new Random().nextDouble() * totalWeight;
+        // 按权重随机选择矿物（totalWeight 预计算自 LevelConfig）
+        double totalWeight = config.getTotalMineralWeight();
+        double r = ThreadLocalRandom.current().nextDouble(totalWeight);
         double cumulative = 0;
         for (MineralEntry entry : minerals) {
             cumulative += entry.getWeight();
@@ -260,6 +264,7 @@ public class GeneratorManager {
         private final double upgradeCost;
         private final double replaceChance;
         private final List<MineralEntry> minerals;
+        private final double totalMineralWeight;
 
         public LevelConfig(int level, String name, double upgradeCost, double replaceChance, List<MineralEntry> minerals) {
             this.level = level;
@@ -267,6 +272,7 @@ public class GeneratorManager {
             this.upgradeCost = upgradeCost;
             this.replaceChance = replaceChance;
             this.minerals = minerals;
+            this.totalMineralWeight = minerals.stream().mapToDouble(MineralEntry::getWeight).sum();
         }
 
         public int getLevel() { return level; }
@@ -274,6 +280,7 @@ public class GeneratorManager {
         public double getUpgradeCost() { return upgradeCost; }
         public double getReplaceChance() { return replaceChance; }
         public List<MineralEntry> getMinerals() { return minerals; }
+        public double getTotalMineralWeight() { return totalMineralWeight; }
     }
 
     /**

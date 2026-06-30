@@ -15,7 +15,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -45,13 +47,15 @@ public class TitleGUI implements Listener {
 
         UUID playerId = player.getUniqueId();
         String currentTitle = titleManager.getCurrentTitle(playerId);
+        // 批量查询已解锁称号（一次查询替代 N 次 isUnlocked 调用）
+        Set<String> unlockedSet = new HashSet<>(titleManager.getUnlockedTitles(playerId));
 
         int slot = 0;
         for (String titleId : titleIds) {
             TitleManager.TitleConfig title = titleManager.getTitleConfig(titleId);
             if (title == null) continue;
 
-            boolean unlocked = titleManager.isUnlocked(playerId, titleId);
+            boolean unlocked = unlockedSet.contains(titleId);
             boolean isCurrent = titleId.equals(currentTitle);
 
             inv.setItem(slot, createTitleItem(title, unlocked, isCurrent, player));

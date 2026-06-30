@@ -42,6 +42,11 @@ commands:
     description: 安全防护系统命令（查看拦截状态、封禁/解封 IP）
     usage: /security status
     permission: letisland.security.admin
+  homeland:
+    description: 家园系统命令（创建家园、仓库、升级、设施）
+    usage: /homeland help
+    aliases: [hd]
+    permission: letisland.homeland.use
   letisland:
     description: 插件管理与日志查询命令
     usage: /letisland log help
@@ -93,6 +98,13 @@ permissions:
   # 安全防护系统权限
   letisland.security.admin:
     description: 允许管理安全防护系统（查看状态、封禁/解封 IP、热重载、开关）
+    default: op
+  # 家园系统权限
+  letisland.homeland.use:
+    description: 允许使用家园系统（创建家园、仓库、设施）
+    default: true
+  letisland.homeland.admin:
+    description: 允许管理家园系统（设置等级、强制拉入、热重载）
     default: op
   # 日志系统权限
   letisland.admin:

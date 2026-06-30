@@ -1,0 +1,146 @@
+# Letisland 家园系统配置文件
+
+homeland:
+  # 系统开关
+  enabled: true
+  # 家园名称长度限制
+  name:
+    min-length: 2
+    max-length: 12
+
+  # 贡献值奖励：提交物品时按材质给点数。未列出材质默认给 1 点/个
+  contribution-rates:
+    COBBLESTONE: 1
+    WHEAT: 2
+    EGG: 2
+    OAK_LOG: 2
+    LEATHER: 3
+    IRON_INGOT: 3
+    GOLD_INGOT: 4
+    REDSTONE: 5
+    SLIME_BALL: 10
+    DIAMOND: 15
+    NETHERITE_INGOT: 50
+
+  # 家园等级升级所需资源（从仓库扣除）。1级初始，可升到3级
+  level-requirements:
+    2:
+      COBBLESTONE: 1024
+      OAK_LOG: 64
+      CHERRY_LOG: 64
+      BIRCH_LOG: 64
+      IRON_INGOT: 256
+      GOLD_INGOT: 128
+      REDSTONE: 64
+      DIAMOND: 5
+      SLIME_BALL: 64
+      LEATHER: 32
+      WHEAT: 64
+      NETHERITE_INGOT: 5
+      ROTTEN_FLESH: 64
+      GUNPOWDER: 32
+      STRING: 32
+      SPIDER_EYE: 8
+    3:
+      COBBLESTONE: 2048
+      OAK_LOG: 128
+      JUNGLE_LOG: 64
+      SPRUCE_LOG: 64
+      IRON_BLOCK: 64
+      GOLD_INGOT: 64
+      REDSTONE: 128
+      DIAMOND_BLOCK: 5
+      SLIME_BALL: 4
+      EGG: 16
+      LEATHER: 32
+      WHEAT: 128
+      CARROT: 256
+      NETHERITE_BLOCK: 5
+      ROTTEN_FLESH: 256
+      GUNPOWDER: 64
+      STRING: 128
+      SPIDER_EYE: 64
+
+  # 最高等级（4-9 级以后再开发）
+  max-level: 3
+
+# 魔法台（一级开放，双消耗：金币 + 贡献值）
+magic-table:
+  # 从玩家金币余额扣除的数量
+  cost-coins: 200
+  # 从玩家贡献值扣除的数量（闭环：提交资源→赚贡献→抽奖）
+  cost-contribution: 200
+  # 奖品池（按权重随机抽取）
+  prizes:
+    - material: OAK_SLAB
+      amount: 64
+      weight: 100.0
+    - material: DIRT
+      amount: 16
+      weight: 80.0
+    - material: SAND
+      amount: 16
+      weight: 80.0
+    - material: IRON_INGOT
+      amount: 5
+      weight: 50.0
+    - material: MAGMA_BLOCK
+      amount: 2
+      weight: 30.0
+    - material: SMALL_AMETHYST_BUD
+      amount: 1
+      weight: 20.0
+    - material: BEE_NEST
+      amount: 1
+      weight: 15.0
+    - material: TURTLE_EGG
+      amount: 1
+      weight: 12.0
+    - material: WITHER_ROSE
+      amount: 1
+      weight: 10.0
+    - material: AMETHYST_CLUSTER
+      amount: 1
+      weight: 8.0
+    - material: SCULK_SENSOR
+      amount: 1
+      weight: 6.0
+    - material: SCULK_SHRIEKER
+      amount: 1
+      weight: 5.0
+    - material: DIAMOND
+      amount: 1
+      weight: 5.0
+    - material: END_PORTAL_FRAME
+      amount: 1
+      weight: 1.0
+    - material: DRAGON_HEAD
+      amount: 1
+      weight: 0.1
+    - material: ELYTRA
+      amount: 1
+      weight: 0.1
+    - material: DRAGON_EGG
+      amount: 1
+      weight: 0.1
+
+# 磨石（二级开放，纯材料转化，不消耗贡献值）
+grindstone:
+  # 合成配方：input_num 个 input → output_num 个 output
+  recipes:
+    - input: COBBLESTONE
+      output: GRAVEL
+      input_num: 1
+      output_num: 1
+    - input: GRAVEL
+      output: SAND
+      input_num: 2
+      output_num: 1
+    - input: OAK_LEAVES
+      output: DIRT
+      input_num: 8
+      output_num: 1
+    - input: OAK_PLANKS
+      output: STICK
+      input_num: 1
+      output_num: 64

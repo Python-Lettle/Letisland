@@ -18,7 +18,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -51,6 +56,11 @@ public class TitleManager {
         this.logManager = logManager;
         this.titlesFile = new File(plugin.getDataFolder(), "titles.yml");
         loadConfig();
+    }
+
+    /** 玩家退出时清理当前称号缓存 */
+    public void evictCache(@NotNull UUID uuid) {
+        currentTitleCache.remove(uuid);
     }
 
     // ==================== 配置加载 ====================
@@ -239,14 +249,14 @@ public class TitleManager {
         }
         // 检查物品
         for (UnlockItem item : items) {
-            if (!hasEnoughItem(player, item.getMaterial(), item.getAmount())) {
+            if (!cn.lettle.letisland.util.InventoryUtils.hasEnoughItem(player, item.getMaterial(), item.getAmount())) {
                 return new UnlockResult(false, "§c材料不足！需要 §e" +
                         item.getAmount() + " §c个 §e" + item.getDisplayName());
             }
         }
         // 扣除物品
         for (UnlockItem item : items) {
-            removeItem(player, item.getMaterial(), item.getAmount());
+            cn.lettle.letisland.util.InventoryUtils.removeItem(player, item.getMaterial(), item.getAmount());
         }
         // 解锁
         unlock(playerId, titleId);
@@ -256,43 +266,11 @@ public class TitleManager {
 
     // ==================== 工具方法 ====================
 
-    private boolean hasEnoughItem(Player player, Material material, int amount) {
-        int count = 0;
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == material) {
-                count += item.getAmount();
-            }
-        }
-        return count >= amount;
-    }
-
-    private void removeItem(Player player, Material material, int amount) {
-        int remaining = amount;
-        for (int i = 0; i < player.getInventory().getSize(); i++) {
-            ItemStack item = player.getInventory().getItem(i);
-            if (item == null || item.getType() != material) continue;
-            if (item.getAmount() <= remaining) {
-                remaining -= item.getAmount();
-                player.getInventory().setItem(i, null);
-            } else {
-                item.setAmount(item.getAmount() - remaining);
-                remaining = 0;
-            }
-            if (remaining <= 0) break;
-        }
-    }
-
     /**
      * 统计玩家背包中某材料的数量（供GUI显示用）
      */
     public int countItem(Player player, Material material) {
-        int count = 0;
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == material) {
-                count += item.getAmount();
-            }
-        }
-        return count;
+        return cn.lettle.letisland.util.InventoryUtils.countItem(player, material);
     }
 
     // ==================== Getter ====================

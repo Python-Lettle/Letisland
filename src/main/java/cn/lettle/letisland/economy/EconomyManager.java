@@ -40,6 +40,11 @@ public class EconomyManager {
         this.currencySymbol = currencySymbol;
     }
 
+    /** 玩家退出时清理余额缓存 */
+    public void evictCache(@NotNull UUID uuid) {
+        balanceCache.remove(uuid);
+    }
+
     /**
      * 获取玩家余额
      */

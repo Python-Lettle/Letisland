@@ -1,5 +1,6 @@
 package cn.lettle.letisland.trash;
 
+import cn.lettle.letisland.util.ItemBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -131,13 +132,7 @@ public class TrashBinListener implements Listener {
 
     @NotNull
     private ItemStack createNamed(@NotNull Material material, @NotNull String name) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            item.setItemMeta(meta);
-        }
-        return item;
+        return ItemBuilder.createNamed(material, name);
     }
 
     /**

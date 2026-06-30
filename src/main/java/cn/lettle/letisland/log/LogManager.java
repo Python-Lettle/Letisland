@@ -178,9 +178,15 @@ public class LogManager {
             configurer.configure(ps);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
+                    LogType type;
+                    try {
+                        type = LogType.valueOf(rs.getString("log_type"));
+                    } catch (IllegalArgumentException e) {
+                        continue; // 跳过未知日志类型
+                    }
                     result.add(new LogEntry(
                             rs.getLong("id"),
-                            LogType.valueOf(rs.getString("log_type")),
+                            type,
                             UUID.fromString(rs.getString("player_uuid")),
                             rs.getString("player_name"),
                             rs.getString("ip"),

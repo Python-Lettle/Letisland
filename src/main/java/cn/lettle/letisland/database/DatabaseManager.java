@@ -94,7 +94,9 @@ public class DatabaseManager {
             stmt.execute("PRAGMA foreign_keys = ON;");
             stmt.execute("PRAGMA busy_timeout = 5000;");
         } catch (SQLException e) {
-            plugin.getLogger().warning("设置数据库参数失败: " + e.getMessage());
+            // PRAGMA 失败意味着连接缺少 WAL/外键保护，不应继续使用
+            try { conn.close(); } catch (SQLException ignored) {}
+            throw new SQLException("设置数据库参数失败: " + e.getMessage(), e);
         }
         return conn;
     }
@@ -113,6 +115,9 @@ public class DatabaseManager {
             }
             // 连接可能因异常已关闭，替换为新连接
             if (real.isClosed()) {
+                synchronized (realConnections) {
+                    realConnections.remove(real); // 移除死连接，避免列表累积
+                }
                 real = openRealConnection();
                 synchronized (realConnections) {
                     realConnections.add(real);
@@ -221,6 +226,42 @@ public class DatabaseManager {
                     );
                     """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_security_until ON security_blocks(blocked_until);");
+
+            // 家园系统 - 家园主表
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS homelands (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name VARCHAR(32) NOT NULL UNIQUE,
+                        owner_uuid VARCHAR(36) NOT NULL,
+                        owner_name VARCHAR(32) NOT NULL,
+                        level INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """);
+
+            // 家园系统 - 成员（player_uuid 全局唯一 → 一人只能在一个家园）
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS homeland_members (
+                        player_uuid VARCHAR(36) PRIMARY KEY,
+                        player_name VARCHAR(32) NOT NULL,
+                        homeland_id INTEGER NOT NULL,
+                        contribution BIGINT NOT NULL DEFAULT 0,
+                        joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (homeland_id) REFERENCES homelands(id)
+                    );
+                    """);
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_members_homeland ON homeland_members(homeland_id);");
+
+            // 家园系统 - 仓库资源（material→count 计数模型，非物理箱子）
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS homeland_warehouse (
+                        homeland_id INTEGER NOT NULL,
+                        material VARCHAR(64) NOT NULL,
+                        amount BIGINT NOT NULL DEFAULT 0,
+                        PRIMARY KEY (homeland_id, material),
+                        FOREIGN KEY (homeland_id) REFERENCES homelands(id)
+                    );
+                    """);
         }
     }
 
