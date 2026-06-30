@@ -1,6 +1,7 @@
 package cn.lettle.letisland.fishing;
 
 import cn.lettle.letisland.economy.EconomyManager;
+import cn.lettle.letisland.ship.ShipManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -31,6 +32,7 @@ public class FishingGUI implements Listener {
 
     private final FishingManager fishingManager;
     private final EconomyManager economyManager;
+    private final ShipManager shipManager;
 
     // GUI标题
     private static final String LEVEL_GUI_TITLE = "§6§l钓鱼科技";
@@ -51,9 +53,11 @@ public class FishingGUI implements Listener {
     private final Map<UUID, String> openGUIs = new HashMap<>();
     private final Set<UUID> sellOpen = new HashSet<>();
 
-    public FishingGUI(@NotNull FishingManager fishingManager, @NotNull EconomyManager economyManager) {
+    public FishingGUI(@NotNull FishingManager fishingManager, @NotNull EconomyManager economyManager,
+                      @NotNull ShipManager shipManager) {
         this.fishingManager = fishingManager;
         this.economyManager = economyManager;
+        this.shipManager = shipManager;
     }
 
     // ==================== 等级GUI ====================
@@ -355,6 +359,14 @@ public class FishingGUI implements Listener {
         if (fishCount == 0) {
             player.sendMessage("§c没有可出售的鱼！");
             return;
+        }
+
+        // 船体加成（仅骑船时生效）
+        if (shipManager.isPlayerOnBoat(player)) {
+            int hullLevel = shipManager.getHullLevel(player.getUniqueId());
+            if (hullLevel > 0) {
+                totalValue *= (1.0 + hullLevel * shipManager.getHullValueBonusPerLevel());
+            }
         }
 
         economyManager.deposit(player, totalValue);

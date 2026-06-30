@@ -1,6 +1,7 @@
 package cn.lettle.letisland.fishing;
 
 import cn.lettle.letisland.economy.EconomyManager;
+import cn.lettle.letisland.ship.ShipManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -28,9 +29,10 @@ public class FishingCommand implements CommandExecutor, TabCompleter {
     private final FishingManager fishingManager;
     private final FishingGUI fishingGUI;
 
-    public FishingCommand(@NotNull FishingManager fishingManager, @NotNull EconomyManager economyManager) {
+    public FishingCommand(@NotNull FishingManager fishingManager, @NotNull EconomyManager economyManager,
+                          @NotNull ShipManager shipManager) {
         this.fishingManager = fishingManager;
-        this.fishingGUI = new FishingGUI(fishingManager, economyManager);
+        this.fishingGUI = new FishingGUI(fishingManager, economyManager, shipManager);
     }
 
     /**

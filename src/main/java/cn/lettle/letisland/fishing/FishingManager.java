@@ -598,13 +598,22 @@ public class FishingManager {
      */
     @Nullable
     public FishConfig rollFish(int playerLevel) {
+        return rollFish(playerLevel, 0.0, 0);
+    }
+
+    /**
+     * 根据玩家等级随机选择一条鱼，可对高 tier 鱼施加权重加成（船帆效果）
+     * @param rareBonus          加成倍率（如 0.15 表示权重 ×1.15），<=0 表示无加成
+     * @param rareTierThreshold  tier >= 此值的鱼才享受加成
+     */
+    public FishConfig rollFish(int playerLevel, double rareBonus, int rareTierThreshold) {
         // 筛选玩家可钓到的鱼（tier <= playerLevel）并同步累计权重
         List<FishConfig> available = new ArrayList<>();
         double totalWeight = 0;
         for (FishConfig fish : fishConfigs.values()) {
             if (fish.getTier() <= playerLevel) {
                 available.add(fish);
-                totalWeight += fish.getWeight();
+                totalWeight += effectiveWeight(fish, rareBonus, rareTierThreshold);
             }
         }
         if (available.isEmpty()) return null;
@@ -613,12 +622,21 @@ public class FishingManager {
         double r = ThreadLocalRandom.current().nextDouble(totalWeight);
         double cumulative = 0;
         for (FishConfig fish : available) {
-            cumulative += fish.getWeight();
+            cumulative += effectiveWeight(fish, rareBonus, rareTierThreshold);
             if (r <= cumulative) {
                 return fish;
             }
         }
         return available.get(available.size() - 1);
+    }
+
+    /** 计算鱼在当前加成下的实际权重 */
+    private double effectiveWeight(@NotNull FishConfig fish, double rareBonus, int rareTierThreshold) {
+        double w = fish.getWeight();
+        if (rareBonus > 0 && fish.getTier() >= rareTierThreshold) {
+            w *= (1 + rareBonus);
+        }
+        return w;
     }
 
     /**

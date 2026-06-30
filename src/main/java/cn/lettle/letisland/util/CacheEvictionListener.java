@@ -6,6 +6,7 @@ import cn.lettle.letisland.fishing.FishingManager;
 import cn.lettle.letisland.home.HomeCommand;
 import cn.lettle.letisland.home.HomeManager;
 import cn.lettle.letisland.home.HomelandScoreboardManager;
+import cn.lettle.letisland.ship.ShipManager;
 import cn.lettle.letisland.title.TitleManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -28,6 +29,7 @@ public class CacheEvictionListener implements Listener {
     private final FishingListener fishingListener;
     private final HomeCommand homeCommand;
     private final HomelandScoreboardManager scoreboardManager;
+    private final ShipManager shipManager;
 
     public CacheEvictionListener(@NotNull HomeManager homeManager,
                                  @NotNull EconomyManager economyManager,
@@ -35,7 +37,8 @@ public class CacheEvictionListener implements Listener {
                                  @NotNull TitleManager titleManager,
                                  @NotNull FishingListener fishingListener,
                                  @NotNull HomeCommand homeCommand,
-                                 @NotNull HomelandScoreboardManager scoreboardManager) {
+                                 @NotNull HomelandScoreboardManager scoreboardManager,
+                                 @NotNull ShipManager shipManager) {
         this.homeManager = homeManager;
         this.economyManager = economyManager;
         this.fishingManager = fishingManager;
@@ -43,6 +46,7 @@ public class CacheEvictionListener implements Listener {
         this.fishingListener = fishingListener;
         this.homeCommand = homeCommand;
         this.scoreboardManager = scoreboardManager;
+        this.shipManager = shipManager;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -55,5 +59,6 @@ public class CacheEvictionListener implements Listener {
         fishingListener.evictCooldown(uuid);
         homeCommand.evictInvite(uuid);
         scoreboardManager.onQuit(uuid);
+        shipManager.evictCache(uuid);
     }
 }

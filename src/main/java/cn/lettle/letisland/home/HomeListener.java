@@ -1,5 +1,6 @@
 package cn.lettle.letisland.home;
 
+import cn.lettle.letisland.ship.ShipyardGUI;
 import cn.lettle.letisland.util.ItemBuilder;
 import cn.lettle.letisland.util.MaterialNames;
 import org.bukkit.Bukkit;
@@ -73,6 +74,7 @@ public class HomeListener implements Listener {
 
     // 设施菜单槽位
     static final int FACILITY_MAGIC_SLOT = 11;
+    static final int FACILITY_SHIPYARD_SLOT = 13;
     static final int FACILITY_GRINDSTONE_SLOT = 15;
     private static final int FACILITY_BACK_SLOT = 22;
 
@@ -80,6 +82,7 @@ public class HomeListener implements Listener {
     private final HomeManager homeManager;
     private MagicTableGUI magicTableGUI;
     private GrindstoneGUI grindstoneGUI;
+    private ShipyardGUI shipyardGUI;
     private HomelandScoreboardManager scoreboardManager;
 
     public HomeListener(@NotNull JavaPlugin plugin, @NotNull HomeManager homeManager) {
@@ -88,9 +91,11 @@ public class HomeListener implements Listener {
     }
 
     /** 由 Letisland.java 装配时注入 */
-    public void setFacilityGUIs(@NotNull MagicTableGUI magicTableGUI, @NotNull GrindstoneGUI grindstoneGUI) {
+    public void setFacilityGUIs(@NotNull MagicTableGUI magicTableGUI, @NotNull GrindstoneGUI grindstoneGUI,
+                                @NotNull ShipyardGUI shipyardGUI) {
         this.magicTableGUI = magicTableGUI;
         this.grindstoneGUI = grindstoneGUI;
+        this.shipyardGUI = shipyardGUI;
     }
 
     /** 由 Letisland.java 装配时注入计分板管理器 */
@@ -142,7 +147,8 @@ public class HomeListener implements Listener {
         // 设施
         inv.setItem(MAIN_FACILITY_SLOT, createNamed(Material.CRAFTING_TABLE,
                 "§a家园设施", "§7魔法台: §e" + (homeManager.canUseMagicTable(homelandId) ? "可用" : "锁定"),
-                "§7磨石: §e" + (homeManager.canUseGrindstone(homelandId) ? "可用" : "锁定")));
+                "§7磨石: §e" + (homeManager.canUseGrindstone(homelandId) ? "可用" : "锁定"),
+                "§7造船厂: §e" + (homeManager.canUseShipyard(homelandId) ? "可用" : "锁定")));
         // 信息
         long myContribution = homeManager.getContribution(player.getUniqueId());
         int memberCount = homeManager.getMemberCount(homelandId);
@@ -453,6 +459,11 @@ public class HomeListener implements Listener {
         inv.setItem(FACILITY_GRINDSTONE_SLOT, grindUnlocked
                 ? createNamed(Material.GRINDSTONE, "§a磨石", "§7放入材料加工", "§7不消耗贡献值")
                 : createNamed(Material.GRAY_STAINED_GLASS_PANE, "§8磨石（2级解锁）"));
+        // 造船厂
+        boolean shipUnlocked = homeManager.canUseShipyard(homelandId);
+        inv.setItem(FACILITY_SHIPYARD_SLOT, shipUnlocked
+                ? createNamed(Material.OAK_BOAT, "§b造船厂", "§7升级船只组件", "§7需骑船时生效加成")
+                : createNamed(Material.GRAY_STAINED_GLASS_PANE, "§8造船厂（3级解锁）"));
         inv.setItem(FACILITY_BACK_SLOT, createNamed(Material.ARROW, "§e← 返回主面板"));
         player.openInventory(inv);
     }
@@ -480,6 +491,15 @@ public class HomeListener implements Listener {
                 if (grindstoneGUI != null) grindstoneGUI.open(player);
             } else {
                 player.sendMessage("§c磨石需要家园 2 级解锁");
+            }
+            return;
+        }
+        if (slot == FACILITY_SHIPYARD_SLOT) {
+            if (homeManager.canUseShipyard(holder.homelandId())) {
+                player.closeInventory();
+                if (shipyardGUI != null) shipyardGUI.open(player);
+            } else {
+                player.sendMessage("§c造船厂需要家园 3 级解锁");
             }
         }
     }

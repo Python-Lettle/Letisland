@@ -1,0 +1,58 @@
+# 造船厂配置（家园 3 级解锁）
+# 玩家拥有独立的船，升级 4 个组件，仅在玩家骑船时生效
+# 升级消耗家园仓库材料（仅限仓库白名单内的基础材料：圆石/铁锭/钻石/下界合金锭等）
+shipyard:
+  enabled: true
+  max-level: 5
+
+  components:
+    # 船帆：提升 rollFish 中高 tier（史诗/传说）鱼的权重
+    sail:
+      name: "船帆"
+      material: WHITE_BANNER
+      rarity-tier-threshold: 4
+      bonus-per-level: 0.15
+      levels:
+        1: { COBBLESTONE: 32, IRON_INGOT: 8 }
+        2: { COBBLESTONE: 64, IRON_INGOT: 16 }
+        3: { COBBLESTONE: 128, IRON_INGOT: 32, DIAMOND: 4 }
+        4: { COBBLESTONE: 256, IRON_INGOT: 64, DIAMOND: 8 }
+        5: { COBBLESTONE: 512, IRON_INGOT: 128, DIAMOND: 16, NETHERITE_INGOT: 2 }
+
+    # 船桨：骑船时渐进加速，最大速度上限随等级提升
+    oar:
+      name: "船桨"
+      material: WOODEN_PICKAXE
+      max-speed-base: 0.4
+      max-speed-bonus-per-level: 0.04
+      boost-per-level: 0.08
+      levels:
+        1: { COBBLESTONE: 32, IRON_INGOT: 8 }
+        2: { COBBLESTONE: 64, IRON_INGOT: 16 }
+        3: { COBBLESTONE: 128, IRON_INGOT: 32, DIAMOND: 4 }
+        4: { COBBLESTONE: 256, IRON_INGOT: 64, DIAMOND: 8 }
+        5: { COBBLESTONE: 512, IRON_INGOT: 128, DIAMOND: 16, NETHERITE_INGOT: 2 }
+
+    # 船体：出售/自动出售鱼的价格加成（仅骑船时）
+    hull:
+      name: "船体"
+      material: OAK_BOAT
+      value-bonus-per-level: 0.05
+      levels:
+        1: { COBBLESTONE: 32, IRON_INGOT: 8 }
+        2: { COBBLESTONE: 64, IRON_INGOT: 16 }
+        3: { COBBLESTONE: 128, IRON_INGOT: 32, DIAMOND: 4 }
+        4: { COBBLESTONE: 256, IRON_INGOT: 64, DIAMOND: 8 }
+        5: { COBBLESTONE: 512, IRON_INGOT: 128, DIAMOND: 16, NETHERITE_INGOT: 2 }
+
+    # 渔网：提升钓到自定义鱼（而非原版垃圾）的概率
+    net:
+      name: "渔网"
+      material: FISHING_ROD
+      custom-fish-chance-bonus-per-level: 0.03
+      levels:
+        1: { COBBLESTONE: 32, IRON_INGOT: 8 }
+        2: { COBBLESTONE: 64, IRON_INGOT: 16 }
+        3: { COBBLESTONE: 128, IRON_INGOT: 32, DIAMOND: 4 }
+        4: { COBBLESTONE: 256, IRON_INGOT: 64, DIAMOND: 8 }
+        5: { COBBLESTONE: 512, IRON_INGOT: 128, DIAMOND: 16, NETHERITE_INGOT: 2 }

@@ -262,6 +262,17 @@ public class DatabaseManager {
                         FOREIGN KEY (homeland_id) REFERENCES homelands(id)
                     );
                     """);
+
+            // 造船厂系统 - 玩家船只组件等级（玩家级数据，与家园解耦）
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS player_ship (
+                        player_uuid VARCHAR(36) PRIMARY KEY,
+                        sail_level INT NOT NULL DEFAULT 0,
+                        oar_level INT NOT NULL DEFAULT 0,
+                        hull_level INT NOT NULL DEFAULT 0,
+                        net_level INT NOT NULL DEFAULT 0
+                    );
+                    """);
         }
     }
 

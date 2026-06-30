@@ -23,6 +23,9 @@ import cn.lettle.letisland.log.LogManager;
 import cn.lettle.letisland.security.SecurityCommand;
 import cn.lettle.letisland.security.SecurityListener;
 import cn.lettle.letisland.security.SecurityManager;
+import cn.lettle.letisland.ship.ShipListener;
+import cn.lettle.letisland.ship.ShipManager;
+import cn.lettle.letisland.ship.ShipyardGUI;
 import cn.lettle.letisland.shop.ShopCommand;
 import cn.lettle.letisland.shop.ShopListener;
 import cn.lettle.letisland.shop.ShopManager;
@@ -60,6 +63,7 @@ public final class Letisland extends JavaPlugin {
         saveResource("fishing.yml", false);
         saveResource("titles.yml", false);
         saveResource("home.yml", false);
+        saveResource("shipyard.yml", false);
 
         // 初始化数据库管理器（必须在所有数据管理器之前初始化）
         databaseManager = new DatabaseManager(this);
@@ -90,10 +94,13 @@ public final class Letisland extends JavaPlugin {
         generatorManager = new GeneratorManager(getDataFolder(), economyManager);
         GeneratorListener generatorListener = new GeneratorListener(generatorManager);
 
+        // 初始化造船厂系统（需在钓鱼系统之前，供 FishingListener/FishingCommand 注入）
+        ShipManager shipManager = new ShipManager(this, databaseManager);
+
         // 初始化钓鱼系统
         fishingManager = new FishingManager(this, economyManager, databaseManager, logManager);
-        fishingListener = new FishingListener(fishingManager);
-        FishingCommand fishingCommand = new FishingCommand(fishingManager, economyManager);
+        fishingListener = new FishingListener(fishingManager, shipManager);
+        FishingCommand fishingCommand = new FishingCommand(fishingManager, economyManager, shipManager);
 
         // 注册命令
         EconomyCommand economyCommand = new EconomyCommand(economyManager);
@@ -135,7 +142,8 @@ public final class Letisland extends JavaPlugin {
         HomeListener homeListener = new HomeListener(this, homeManager);
         MagicTableGUI magicTableGUI = new MagicTableGUI(this, homeManager, economyManager);
         GrindstoneGUI grindstoneGUI = new GrindstoneGUI(this, homeManager);
-        homeListener.setFacilityGUIs(magicTableGUI, grindstoneGUI);
+        ShipyardGUI shipyardGUI = new ShipyardGUI(shipManager, homeManager, homeListener);
+        homeListener.setFacilityGUIs(magicTableGUI, grindstoneGUI, shipyardGUI);
         scoreboardManager = new HomelandScoreboardManager(homeManager);
         scoreboardManager.startRefreshTask(this);
         homeListener.setScoreboardManager(scoreboardManager);
@@ -143,10 +151,13 @@ public final class Letisland extends JavaPlugin {
         getCommand("homeland").setExecutor(homeCommand);
         getCommand("homeland").setTabCompleter(homeCommand);
 
+        // 初始化造船厂骑船加速监听器
+        ShipListener shipListener = new ShipListener(shipManager);
+
         // 注册中央缓存驱逐监听器（玩家退出时统一清理各管理器内存缓存）
         CacheEvictionListener cacheEvictionListener = new CacheEvictionListener(
                 homeManager, economyManager, fishingManager, titleManager,
-                fishingListener, homeCommand, scoreboardManager);
+                fishingListener, homeCommand, scoreboardManager, shipManager);
 
         // 注册事件监听器
         getServer().getPluginManager().registerEvents(securityListener, this);
@@ -161,6 +172,8 @@ public final class Letisland extends JavaPlugin {
         getServer().getPluginManager().registerEvents(homeListener, this);
         getServer().getPluginManager().registerEvents(magicTableGUI, this);
         getServer().getPluginManager().registerEvents(grindstoneGUI, this);
+        getServer().getPluginManager().registerEvents(shipyardGUI, this);
+        getServer().getPluginManager().registerEvents(shipListener, this);
         getServer().getPluginManager().registerEvents(cacheEvictionListener, this);
 
         // 输出启动信息
@@ -185,6 +198,9 @@ public final class Letisland extends JavaPlugin {
         getLogger().info("家园系统已加载，状态: " + (homeManager.isEnabled() ? "启用" : "关闭") +
                 "，魔法台奖品: " + homeManager.getMagicTablePrizes().size() + " 种" +
                 "，磨石配方: " + homeManager.getGrindstoneRecipes().size() + " 种");
+        getLogger().info("造船厂系统已加载，状态: " + (shipManager.isEnabled() ? "启用" : "关闭") +
+                "，组件: 4 种" +
+                "，最高等级: " + shipManager.getMaxLevel());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package cn.lettle.letisland.fishing;
 
+import cn.lettle.letisland.ship.ShipManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
@@ -28,6 +29,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class FishingListener implements Listener {
 
     private final FishingManager fishingManager;
+    private final ShipManager shipManager;
 
     /** 钓鱼奖励冷却（防止双击收竿重复触发），记录上次奖励时间戳 */
     private final Map<UUID, Long> fishingCooldown = new ConcurrentHashMap<>();
@@ -35,8 +37,9 @@ public class FishingListener implements Listener {
     /** 冷却时间（毫秒） */
     private static final long FISH_COOLDOWN_MS = 2000;
 
-    public FishingListener(@NotNull FishingManager fishingManager) {
+    public FishingListener(@NotNull FishingManager fishingManager, @NotNull ShipManager shipManager) {
         this.fishingManager = fishingManager;
+        this.shipManager = shipManager;
     }
 
     /** 玩家退出时清理冷却记录 */
@@ -73,14 +76,36 @@ public class FishingListener implements Listener {
         // 每次钓鱼固定获得1点钓鱼经验
         fishingManager.addExp(playerId, 1);
 
+        // 船只加成（仅骑船时生效）
+        boolean onBoat = shipManager.isPlayerOnBoat(player);
+        double sailBonus = 0.0;
+        int sailThreshold = 0;
+        double hullMultiplier = 1.0;
+        double netBonus = 0.0;
+        if (onBoat) {
+            int sailLevel = shipManager.getSailLevel(playerId);
+            int hullLevel = shipManager.getHullLevel(playerId);
+            int netLevel = shipManager.getNetLevel(playerId);
+            if (sailLevel > 0) {
+                sailBonus = sailLevel * shipManager.getSailBonusPerLevel();
+                sailThreshold = shipManager.getSailRarityThreshold();
+            }
+            if (hullLevel > 0) {
+                hullMultiplier = 1.0 + hullLevel * shipManager.getHullValueBonusPerLevel();
+            }
+            if (netLevel > 0) {
+                netBonus = netLevel * shipManager.getNetChanceBonusPerLevel();
+            }
+        }
+
         // 决定奖励类型
         double roll = ThreadLocalRandom.current().nextDouble();
-        double fishChance = fishingManager.getCustomFishChance();
+        double fishChance = fishingManager.getCustomFishChance() + netBonus;
         double expChance = fishingManager.getExpItemChance();
 
         if (roll < fishChance) {
             // 钓到自定义鱼
-            FishingManager.FishConfig fish = fishingManager.rollFish(level);
+            FishingManager.FishConfig fish = fishingManager.rollFish(level, sailBonus, sailThreshold);
             if (fish != null) {
                 double weight = fishingManager.rollWeight(fish);
                 event.setCancelled(true);
@@ -90,7 +115,7 @@ public class FishingListener implements Listener {
 
                 // 检查是否自动出售
                 if (fishingManager.shouldAutoSell(playerId, fish.getTier())) {
-                    double value = fishingManager.calculateFishValue(fish, weight);
+                    double value = fishingManager.calculateFishValue(fish, weight) * hullMultiplier;
                     fishingManager.getEconomyManager().deposit(player, value);
                     player.sendMessage("§b[钓鱼] §a钓到 §e" + fish.getName() +
                             " §a(§f" + weight + " kg§a) 已自动出售，获得 §e" +

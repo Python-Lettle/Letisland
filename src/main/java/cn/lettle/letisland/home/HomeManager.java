@@ -792,6 +792,10 @@ public class HomeManager {
         return getLevel(homelandId) >= 2;
     }
 
+    public boolean canUseShipyard(int homelandId) {
+        return getLevel(homelandId) >= 3;
+    }
+
     // ==================== 魔法台抽奖 ====================
 
     @NotNull
