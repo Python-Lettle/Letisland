@@ -3,6 +3,21 @@
 # 钓鱼系统开关
 enabled: true
 
+# 区块钓鱼加成
+# 玩家进入新区块后，前 max-charges 次钓鱼获得高级鱼概率提升；
+# 次数耗尽后该区块对该玩家进入冷却，冷却结束后恢复次数。
+# 切换到其它区块时，新区块独立计算。
+chunk-bonus:
+  enabled: true
+  # 每个区块给予的加成次数
+  max-charges: 10
+  # 次数耗尽后的冷却时间（秒）
+  cooldown-seconds: 300
+  # 每次加成对高级鱼权重的提升倍率（0.15 = 高级鱼权重 ×1.15）
+  bonus-per-charge: 0.15
+  # 高级鱼的 tier 阈值（tier >= 此值的鱼获得加成）
+  rarity-tier-threshold: 4
+
 # 自动出售设置
 auto-sell:
   # 是否允许玩家使用自动出售功能

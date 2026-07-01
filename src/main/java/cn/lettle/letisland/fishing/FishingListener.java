@@ -17,6 +17,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -98,6 +101,26 @@ public class FishingListener implements Listener {
             }
         }
 
+        // 区块钓鱼加成（每次钓鱼消耗一次区块充能，提升高级鱼权重）
+        ChunkBonusManager chunkBonusMgr = fishingManager.getChunkBonusManager();
+        double chunkBonus = 0.0;
+        int chunkThreshold = 0;
+        if (chunkBonusMgr.isEnabled()) {
+            int cx = player.getLocation().getBlockX() >> 4;
+            int cz = player.getLocation().getBlockZ() >> 4;
+            ChunkBonusManager.ConsumeResult cr = chunkBonusMgr.tryConsume(
+                    playerId, ChunkBonusManager.chunkKey(cx, cz));
+            chunkBonus = cr.bonus();
+            chunkThreshold = chunkBonusMgr.getRarityThreshold();
+            sendChunkBonusStatus(player, cr);
+        }
+
+        // 合并稀有鱼加成（船帆 + 区块）
+        double rareBonus = sailBonus + chunkBonus;
+        int rareThreshold = 0;
+        if (sailBonus > 0) rareThreshold = sailThreshold;
+        if (chunkBonus > 0) rareThreshold = Math.max(rareThreshold, chunkThreshold);
+
         // 决定奖励类型
         double roll = ThreadLocalRandom.current().nextDouble();
         double fishChance = fishingManager.getCustomFishChance() + netBonus;
@@ -105,7 +128,7 @@ public class FishingListener implements Listener {
 
         if (roll < fishChance) {
             // 钓到自定义鱼
-            FishingManager.FishConfig fish = fishingManager.rollFish(level, sailBonus, sailThreshold);
+            FishingManager.FishConfig fish = fishingManager.rollFish(level, rareBonus, rareThreshold);
             if (fish != null) {
                 double weight = fishingManager.rollWeight(fish);
                 event.setCancelled(true);
@@ -197,5 +220,33 @@ public class FishingListener implements Listener {
 
         String prefix = buff.getType().equals("GOOD") ? "§a" : "§c";
         player.sendMessage("§b[钓鱼] " + prefix + "触发了效果: §e" + buff.getName());
+    }
+
+    /**
+     * 通过动作栏提示玩家当前区块的加成次数/冷却状态
+     */
+    private void sendChunkBonusStatus(@NotNull Player player, @NotNull ChunkBonusManager.ConsumeResult result) {
+        String msg;
+        if (result.bonus() > 0) {
+            if (result.justRefilled()) {
+                msg = "§b[区块加成] §a已恢复！剩余 §e" + result.chargesRemaining() + " §a次高级鱼加成";
+            } else if (result.justStartedCooldown()) {
+                msg = "§b[区块加成] §7进入冷却 §c" + formatTime(result.cooldownRemainingMillis()) + " §7后补满，剩余 §e" + result.chargesRemaining() + " §7次";
+            } else {
+                msg = "§b[区块加成] §7剩余 §e" + result.chargesRemaining() + " §7次，冷却中 §c" + formatTime(result.cooldownRemainingMillis());
+            }
+        } else {
+            msg = "§b[区块加成] §7本区块冷却中，剩余 §c" + formatTime(result.cooldownRemainingMillis());
+        }
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
+    }
+
+    @NotNull
+    private String formatTime(long millis) {
+        long totalSeconds = Math.max(0, millis) / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        if (minutes > 0) return minutes + "分" + seconds + "秒";
+        return seconds + "秒";
     }
 }

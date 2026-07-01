@@ -90,6 +90,9 @@ public class FishingManager {
     /** BUFF 总权重（配置加载后预计算） */
     private double totalBuffWeight = 0;
 
+    /** 区块钓鱼加成管理器（玩家×区块维度的充能/冷却状态） */
+    private ChunkBonusManager chunkBonusManager;
+
     public FishingManager(@NotNull JavaPlugin plugin, @NotNull EconomyManager economyManager,
                          @NotNull DatabaseManager databaseManager, @NotNull LogManager logManager) {
         this.plugin = plugin;
@@ -100,6 +103,8 @@ public class FishingManager {
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.fishWeightKey = new NamespacedKey(plugin, "fish_weight");
         this.expItemKey = new NamespacedKey(plugin, "exp_item");
+        // 先以默认值创建，loadConfig -> parseConfig 会用配置覆盖
+        this.chunkBonusManager = new ChunkBonusManager(false, 10, 300_000L, 0.15, 4);
         loadConfig();
     }
 
@@ -108,6 +113,13 @@ public class FishingManager {
         levelCache.remove(uuid);
         expCache.remove(uuid);
         autoSellTierCache.remove(uuid);
+        chunkBonusManager.evictCache(uuid);
+    }
+
+    /** 获取区块钓鱼加成管理器 */
+    @NotNull
+    public ChunkBonusManager getChunkBonusManager() {
+        return chunkBonusManager;
     }
 
     // ==================== 配置加载 ====================
@@ -244,6 +256,14 @@ public class FishingManager {
 
         // 预计算 BUFF 总权重（配置加载后不变，避免每次 rollBuff 重新求和）
         totalBuffWeight = buffConfigs.values().stream().mapToDouble(BuffConfig::getWeight).sum();
+
+        // 解析区块钓鱼加成配置（热重载时更新管理器参数，缓存状态保留）
+        boolean cbEnabled = fishingConfig.getBoolean("chunk-bonus.enabled", true);
+        int cbMaxCharges = fishingConfig.getInt("chunk-bonus.max-charges", 10);
+        long cbCooldown = fishingConfig.getLong("chunk-bonus.cooldown-seconds", 300) * 1000L;
+        double cbBonus = fishingConfig.getDouble("chunk-bonus.bonus-per-charge", 0.15);
+        int cbThreshold = fishingConfig.getInt("chunk-bonus.rarity-tier-threshold", 4);
+        chunkBonusManager.reloadConfig(cbEnabled, cbMaxCharges, cbCooldown, cbBonus, cbThreshold);
     }
 
     // ==================== 玩家数据 ====================
